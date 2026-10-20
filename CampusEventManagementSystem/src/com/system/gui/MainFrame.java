@@ -114,6 +114,7 @@ private void showPanel(javax.swing.JPanel panel) {
         btnNavEvents.addActionListener(this::btnNavEventsActionPerformed);
 
         btnNavRegistration.setText("Participant Registration");
+        btnNavRegistration.addActionListener(this::btnNavRegistrationActionPerformed);
 
         btnNavReports.setText("View Reports / Events");
         btnNavReports.addActionListener(this::btnNavReportsActionPerformed);
@@ -188,6 +189,11 @@ private void showPanel(javax.swing.JPanel panel) {
         // TODO add your handling code here:
        showPanel(new EventPanel(manager));
     }//GEN-LAST:event_btnNavEventsActionPerformed
+
+    private void btnNavRegistrationActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnNavRegistrationActionPerformed
+        // TODO add your handling code here:
+        showPanel(new RegistrationPanel(manager));
+    }//GEN-LAST:event_btnNavRegistrationActionPerformed
 
     /**
      * @param args the command line arguments
