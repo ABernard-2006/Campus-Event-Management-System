@@ -2,7 +2,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package com.system.model;
+package classModel;
 
 /**
  *
@@ -15,9 +15,9 @@ public class Faculty extends Participant
     private String department;
     private String position;
 
-    public Faculty(int participantId, String fullName, String contactInfo, String facultyNumber, String department, String position) 
+    public Faculty(String fullName, String contactInfo, String facultyNumber, String department, String position) 
     {
-        super(participantId, fullName, contactInfo);
+        super(fullName, contactInfo);
         this.facultyNumber = facultyNumber;
         this.department = department;
         this.position = position;

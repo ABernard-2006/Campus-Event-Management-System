@@ -2,12 +2,13 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package com.system.model;
+package classModel;
 
 /**
  *
  * @author bernard_07
  */
+import CEMS.Main;
 
 public class Venue {
     private int venueId;
@@ -15,8 +16,8 @@ public class Venue {
     private String location;
     private int capacity;
 
-    public Venue(int venueId, String venueName, String location, int capacity) {
-        this.venueId = venueId;
+    public Venue(String venueName, String location, int capacity) {
+        this.venueId = Main.generateVenueId();
         this.venueName = venueName;
         this.location = location;
         this.capacity = capacity;

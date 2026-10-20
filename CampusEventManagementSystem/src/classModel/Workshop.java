@@ -2,9 +2,9 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package com.system.model;
+package classModel;
 
-import campus.Main;
+import CEMS.Main;
 import java.time.LocalDate;
 import java.time.LocalTime;
 /**
@@ -32,7 +32,8 @@ public class Workshop extends Event {
     public String getTopic() { return topic; }
     public String getMaterials() { return materials; }
     public String getSpeaker(){ return speakerName; }
-    public void String setSpeakerName(String speakerName){
+    
+    public void setSpeakerName(String speakerName){
         this.speakerName = require(speakerName, "Speaker");
     }
 

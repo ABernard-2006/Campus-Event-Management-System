@@ -2,7 +2,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package com.system.model;
+package classModel;
 
 /**
  *
@@ -14,9 +14,9 @@ public class Student extends Participant
     private String studentNumber;
     private String program;
 
-    public Student(int participantId, String fullName, String contactInfo, String studentNumber, String program) 
+    public Student(String fullName, String contactInfo, String studentNumber, String program) 
     {
-        super(participantId, fullName, contactInfo);
+        super(fullName, contactInfo);
         this.studentNumber = studentNumber;
         this.program = program;
     }
