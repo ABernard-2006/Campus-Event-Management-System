@@ -26,19 +26,267 @@ public class ReportPanel extends javax.swing.JPanel {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
+        lblEventReports = new javax.swing.JLabel();
+        lblFilterControls = new javax.swing.JLabel();
+        lblSelectEvents = new javax.swing.JLabel();
+        lblReportType = new javax.swing.JLabel();
+        lblDataRange = new javax.swing.JLabel();
+        cmbSelectEvents = new javax.swing.JComboBox<>();
+        cmbReportType = new javax.swing.JComboBox<>();
+        btnGanerateReport = new javax.swing.JButton();
+        spinMinDateRange = new javax.swing.JSpinner();
+        spinMaxDateRange = new javax.swing.JSpinner();
+        lblTo = new javax.swing.JLabel();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        reportTable = new javax.swing.JTable();
+        lblGenerateReport = new javax.swing.JLabel();
+        panelTotalReg = new javax.swing.JPanel();
+        lblTatalReg = new javax.swing.JLabel();
+        lblTotalRegNum = new javax.swing.JLabel();
+        panelTotalAttend = new javax.swing.JPanel();
+        lblTotalAttend = new javax.swing.JLabel();
+        lblTotalAttendNum = new javax.swing.JLabel();
+        panelTotalAttendRateNum = new javax.swing.JPanel();
+        lblTotalAttendRate = new javax.swing.JLabel();
+        lblTotalAttendRateNum = new javax.swing.JLabel();
+
+        setMaximumSize(new java.awt.Dimension(780, 550));
+        setMinimumSize(new java.awt.Dimension(780, 550));
+
+        lblEventReports.setFont(new java.awt.Font("Segoe UI", 1, 24)); // NOI18N
+        lblEventReports.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        lblEventReports.setText("Event & Attendance Reports");
+
+        lblFilterControls.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        lblFilterControls.setText("Filter and Controls");
+
+        lblSelectEvents.setText("Select Event:");
+
+        lblReportType.setText("Report Type:");
+
+        lblDataRange.setText("Date Range:");
+
+        btnGanerateReport.setText("Generate Report");
+
+        spinMinDateRange.setModel(new javax.swing.SpinnerDateModel());
+
+        spinMaxDateRange.setModel(new javax.swing.SpinnerDateModel());
+
+        lblTo.setText("to");
+
+        reportTable.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null, null, null},
+                {null, null, null, null, null, null},
+                {null, null, null, null, null, null},
+                {null, null, null, null, null, null}
+            },
+            new String [] {
+                "Event Name", "Total Registration", "Attended", "Student", "Faculty", "Others"
+            }
+        ));
+        jScrollPane1.setViewportView(reportTable);
+
+        lblGenerateReport.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        lblGenerateReport.setText("Generated Report Table");
+
+        panelTotalReg.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
+
+        lblTatalReg.setFont(new java.awt.Font("Segoe UI", 1, 20)); // NOI18N
+        lblTatalReg.setText("Total Registered: ");
+
+        lblTotalRegNum.setFont(new java.awt.Font("Segoe UI", 1, 20)); // NOI18N
+        lblTotalRegNum.setText("0");
+
+        javax.swing.GroupLayout panelTotalRegLayout = new javax.swing.GroupLayout(panelTotalReg);
+        panelTotalReg.setLayout(panelTotalRegLayout);
+        panelTotalRegLayout.setHorizontalGroup(
+            panelTotalRegLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(panelTotalRegLayout.createSequentialGroup()
+                .addGap(18, 18, 18)
+                .addComponent(lblTatalReg)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(lblTotalRegNum)
+                .addContainerGap(26, Short.MAX_VALUE))
+        );
+        panelTotalRegLayout.setVerticalGroup(
+            panelTotalRegLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, panelTotalRegLayout.createSequentialGroup()
+                .addContainerGap(39, Short.MAX_VALUE)
+                .addGroup(panelTotalRegLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(lblTatalReg)
+                    .addComponent(lblTotalRegNum))
+                .addGap(31, 31, 31))
+        );
+
+        panelTotalAttend.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
+
+        lblTotalAttend.setFont(new java.awt.Font("Segoe UI", 1, 20)); // NOI18N
+        lblTotalAttend.setText("Total Attended:");
+
+        lblTotalAttendNum.setFont(new java.awt.Font("Segoe UI", 1, 20)); // NOI18N
+        lblTotalAttendNum.setText("0");
+
+        javax.swing.GroupLayout panelTotalAttendLayout = new javax.swing.GroupLayout(panelTotalAttend);
+        panelTotalAttend.setLayout(panelTotalAttendLayout);
+        panelTotalAttendLayout.setHorizontalGroup(
+            panelTotalAttendLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, panelTotalAttendLayout.createSequentialGroup()
+                .addGap(30, 30, 30)
+                .addComponent(lblTotalAttend)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(lblTotalAttendNum)
+                .addContainerGap(32, Short.MAX_VALUE))
+        );
+        panelTotalAttendLayout.setVerticalGroup(
+            panelTotalAttendLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, panelTotalAttendLayout.createSequentialGroup()
+                .addContainerGap(36, Short.MAX_VALUE)
+                .addGroup(panelTotalAttendLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(lblTotalAttend)
+                    .addComponent(lblTotalAttendNum))
+                .addGap(34, 34, 34))
+        );
+
+        panelTotalAttendRateNum.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
+
+        lblTotalAttendRate.setFont(new java.awt.Font("Segoe UI", 1, 20)); // NOI18N
+        lblTotalAttendRate.setText("Attendance Rate:");
+
+        lblTotalAttendRateNum.setFont(new java.awt.Font("Segoe UI", 1, 20)); // NOI18N
+        lblTotalAttendRateNum.setText("0.0%");
+
+        javax.swing.GroupLayout panelTotalAttendRateNumLayout = new javax.swing.GroupLayout(panelTotalAttendRateNum);
+        panelTotalAttendRateNum.setLayout(panelTotalAttendRateNumLayout);
+        panelTotalAttendRateNumLayout.setHorizontalGroup(
+            panelTotalAttendRateNumLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(panelTotalAttendRateNumLayout.createSequentialGroup()
+                .addContainerGap(8, Short.MAX_VALUE)
+                .addComponent(lblTotalAttendRate)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(lblTotalAttendRateNum)
+                .addGap(12, 12, 12))
+        );
+        panelTotalAttendRateNumLayout.setVerticalGroup(
+            panelTotalAttendRateNumLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, panelTotalAttendRateNumLayout.createSequentialGroup()
+                .addContainerGap(40, Short.MAX_VALUE)
+                .addGroup(panelTotalAttendRateNumLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(lblTotalAttendRate)
+                    .addComponent(lblTotalAttendRateNum))
+                .addGap(33, 33, 33))
+        );
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 400, Short.MAX_VALUE)
+            .addComponent(lblEventReports, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addGroup(layout.createSequentialGroup()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(23, 23, 23)
+                        .addComponent(panelTotalReg, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(18, 18, 18)
+                        .addComponent(panelTotalAttend, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(18, 18, 18)
+                        .addComponent(panelTotalAttendRateNum, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(lblGenerateReport)))
+                .addGap(0, 24, Short.MAX_VALUE))
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(121, 121, 121)
+                        .addComponent(btnGanerateReport))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addComponent(lblSelectEvents)
+                            .addComponent(lblFilterControls)
+                            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                .addComponent(lblDataRange)
+                                .addComponent(lblReportType)))
+                        .addGap(18, 18, 18)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                            .addComponent(cmbReportType, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(spinMinDateRange)
+                            .addComponent(cmbSelectEvents, javax.swing.GroupLayout.PREFERRED_SIZE, 130, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(lblTo)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(spinMaxDateRange, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addGap(147, 147, 147))
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jScrollPane1)
+                .addContainerGap())
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 300, Short.MAX_VALUE)
+            .addGroup(layout.createSequentialGroup()
+                .addGap(14, 14, 14)
+                .addComponent(lblEventReports)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 19, Short.MAX_VALUE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(lblFilterControls)
+                        .addGap(18, 18, 18)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(lblSelectEvents)
+                            .addComponent(cmbSelectEvents, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(lblReportType)
+                            .addComponent(cmbReportType, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(lblDataRange)
+                            .addComponent(spinMinDateRange, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(lblTo)
+                            .addComponent(spinMaxDateRange, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(134, 134, 134)
+                        .addComponent(btnGanerateReport)))
+                .addGap(18, 18, 18)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                        .addComponent(panelTotalReg, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(panelTotalAttend, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(panelTotalAttendRateNum, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(12, 12, 12)
+                .addComponent(lblGenerateReport)
+                .addGap(18, 18, 18)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 207, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
         );
     }// </editor-fold>//GEN-END:initComponents
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btnGanerateReport;
+    private javax.swing.JComboBox<String> cmbReportType;
+    private javax.swing.JComboBox<String> cmbSelectEvents;
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JLabel lblDataRange;
+    private javax.swing.JLabel lblEventReports;
+    private javax.swing.JLabel lblFilterControls;
+    private javax.swing.JLabel lblGenerateReport;
+    private javax.swing.JLabel lblReportType;
+    private javax.swing.JLabel lblSelectEvents;
+    private javax.swing.JLabel lblTatalReg;
+    private javax.swing.JLabel lblTo;
+    private javax.swing.JLabel lblTotalAttend;
+    private javax.swing.JLabel lblTotalAttendNum;
+    private javax.swing.JLabel lblTotalAttendRate;
+    private javax.swing.JLabel lblTotalAttendRateNum;
+    private javax.swing.JLabel lblTotalRegNum;
+    private javax.swing.JPanel panelTotalAttend;
+    private javax.swing.JPanel panelTotalAttendRateNum;
+    private javax.swing.JPanel panelTotalReg;
+    private javax.swing.JTable reportTable;
+    private javax.swing.JSpinner spinMaxDateRange;
+    private javax.swing.JSpinner spinMinDateRange;
     // End of variables declaration//GEN-END:variables
 }
