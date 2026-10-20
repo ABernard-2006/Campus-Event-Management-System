@@ -8,15 +8,41 @@ import com.system.service.EventManager;
  *
  * @author Dhustine
  */
+import com.system.service.EventManager;
+
 public class MainFrame extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(MainFrame.class.getName());
-    private final EventManager manager; 
+   
+ private final EventManager manager; 
     /**
      * Creates new form MainFrame
      */
     public MainFrame() {
         this(new EventManager());
+    }
+    
+    public MainFrame(EventManager manager, String userRole) 
+    {
+        this.manager = manager;
+        this.userRole = userRole;
+        initComponents();
+        
+        applyRolePermissions();
+    }
+    
+    private void applyRolePermissions() 
+    {
+        // Customize UI depending on the combobox selection passed from LoginFrame
+        if ("Participant".equalsIgnoreCase(userRole)) {
+            // Disable or hide administrative features
+            // btnCreateEvent.setEnabled(false);
+            // tabReports.setVisible(false);
+        } else if ("Organizer".equalsIgnoreCase(userRole)) {
+            // Enable event management features
+        } else if ("Administrator".equalsIgnoreCase(userRole)) {
+            // Full access to all controls
+        }
     }
 
     public MainFrame(EventManager manager) {      // used by the login screen

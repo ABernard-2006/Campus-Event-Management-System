@@ -64,11 +64,15 @@ public class Main {
         {
             e.printStackTrace();
         }
-
-        SwingUtilities.invokeLater(() -> {
-            MainFrame mainDashboard = new MainFrame();
-            mainDashboard.setLocationRelativeTo(null);
-            mainDashboard.setVisible(true);
-        });
+        
+    SwingUtilities.invokeLater(() -> {
+        // 1. Create the shared service manager
+        com.system.service.EventManager manager = new com.system.service.EventManager();
+        
+        // 2. Launch LoginFrame first
+        com.system.gui.LoginFrame loginFrame = new com.system.gui.LoginFrame(manager);
+        loginFrame.setLocationRelativeTo(null);
+        loginFrame.setVisible(true);
+    });
     }
 }

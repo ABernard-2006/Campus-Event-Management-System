@@ -26,15 +26,72 @@ public class RegistrationPanel extends javax.swing.JPanel {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        jLabel1 = new javax.swing.JLabel();
+        lblParticipantsReg = new javax.swing.JLabel();
+        lblRegName = new javax.swing.JLabel();
+        lblRegContact = new javax.swing.JLabel();
+        lblRegNum = new javax.swing.JLabel();
+        lblSelectEvent = new javax.swing.JLabel();
+        lblParticipantsType = new javax.swing.JLabel();
+        txtRegName = new javax.swing.JTextField();
+        txtRegContact = new javax.swing.JTextField();
+        cmbSelectEvent = new javax.swing.JComboBox<>();
+        txtRegNum = new javax.swing.JTextField();
+        cmbParticipantType = new javax.swing.JComboBox<>();
+        btnRegister = new javax.swing.JButton();
+        btnRegClear = new javax.swing.JButton();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        regTable = new javax.swing.JTable();
+        lblRegHistory = new javax.swing.JLabel();
+        txtSearchReg = new javax.swing.JTextField();
+        btnSearchReg = new javax.swing.JButton();
+        lblSearchReg = new javax.swing.JLabel();
 
         setMaximumSize(new java.awt.Dimension(780, 550));
         setMinimumSize(new java.awt.Dimension(780, 550));
+        setPreferredSize(new java.awt.Dimension(780, 550));
 
-        jLabel1.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
-        jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        jLabel1.setText("Participants Registration");
-        jLabel1.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        lblParticipantsReg.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        lblParticipantsReg.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        lblParticipantsReg.setText("Participants Registration");
+        lblParticipantsReg.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+
+        lblRegName.setText("Name: ");
+
+        lblRegContact.setText("BU/Email Address:");
+
+        lblRegNum.setText("ID/Reg Number: ");
+
+        lblSelectEvent.setText("Select Event: ");
+
+        lblParticipantsType.setText("Participants Type: ");
+
+        cmbSelectEvent.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Seminar", "Workshop", " " }));
+
+        cmbParticipantType.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Student", "Faculty", "Others" }));
+
+        btnRegister.setText("Register");
+
+        btnRegClear.setText("Clear");
+
+        regTable.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null}
+            },
+            new String [] {
+                "Registration ID", "Name", "Event", "Type"
+            }
+        ));
+        jScrollPane1.setViewportView(regTable);
+
+        lblRegHistory.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        lblRegHistory.setText("Registration History");
+
+        btnSearchReg.setText("Search");
+
+        lblSearchReg.setText("Search Registration:");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
@@ -42,20 +99,109 @@ public class RegistrationPanel extends javax.swing.JPanel {
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, 768, Short.MAX_VALUE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(lblParticipantsReg, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jScrollPane1)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(lblRegHistory)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(lblSearchReg)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(txtSearchReg, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(btnSearchReg)))
                 .addContainerGap())
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                .addContainerGap(190, Short.MAX_VALUE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(lblParticipantsType)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(cmbParticipantType, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(lblRegContact)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(txtRegContact, javax.swing.GroupLayout.PREFERRED_SIZE, 300, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(lblRegNum)
+                            .addComponent(lblSelectEvent))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(txtRegNum, javax.swing.GroupLayout.PREFERRED_SIZE, 300, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(cmbSelectEvent, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(lblRegName)
+                        .addGap(64, 64, 64)
+                        .addComponent(txtRegName, javax.swing.GroupLayout.PREFERRED_SIZE, 300, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(119, 119, 119)
+                        .addComponent(btnRegister)
+                        .addGap(18, 18, 18)
+                        .addComponent(btnRegClear)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 120, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addGap(188, 188, 188))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jLabel1)
-                .addContainerGap(519, Short.MAX_VALUE))
+                .addComponent(lblParticipantsReg)
+                .addGap(18, 18, 18)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(lblRegName)
+                    .addComponent(txtRegName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(lblRegContact)
+                    .addComponent(txtRegContact, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(lblParticipantsType)
+                    .addComponent(cmbParticipantType, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(lblRegNum)
+                    .addComponent(txtRegNum, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(lblSelectEvent)
+                    .addComponent(cmbSelectEvent, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, 18)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(btnRegClear)
+                    .addComponent(btnRegister))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 35, Short.MAX_VALUE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(lblRegHistory)
+                    .addComponent(txtSearchReg, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnSearchReg)
+                    .addComponent(lblSearchReg))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 238, javax.swing.GroupLayout.PREFERRED_SIZE))
         );
     }// </editor-fold>//GEN-END:initComponents
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JLabel jLabel1;
+    private javax.swing.JButton btnRegClear;
+    private javax.swing.JButton btnRegister;
+    private javax.swing.JButton btnSearchReg;
+    private javax.swing.JComboBox<String> cmbParticipantType;
+    private javax.swing.JComboBox<String> cmbSelectEvent;
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JLabel lblParticipantsReg;
+    private javax.swing.JLabel lblParticipantsType;
+    private javax.swing.JLabel lblRegContact;
+    private javax.swing.JLabel lblRegHistory;
+    private javax.swing.JLabel lblRegName;
+    private javax.swing.JLabel lblRegNum;
+    private javax.swing.JLabel lblSearchReg;
+    private javax.swing.JLabel lblSelectEvent;
+    private javax.swing.JTable regTable;
+    private javax.swing.JTextField txtRegContact;
+    private javax.swing.JTextField txtRegName;
+    private javax.swing.JTextField txtRegNum;
+    private javax.swing.JTextField txtSearchReg;
     // End of variables declaration//GEN-END:variables
 }
