@@ -8,14 +8,23 @@ package com.system.gui;
  *
  * @author Dhustine
  */
+import com.system.service.EventManager;
+
 public class LoginFrame extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(LoginFrame.class.getName());
+    private EventManager manager;
 
     /**
      * Creates new form LoginFrame
      */
     public LoginFrame() {
+        this.manager = new EventManager();
+        initComponents();
+    }
+    
+    public LoginFrame(EventManager manager) {
+        this.manager = manager;
         initComponents();
     }
 
@@ -147,37 +156,49 @@ public class LoginFrame extends javax.swing.JFrame {
 
     private void btnLoginActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLoginActionPerformed
     
-    String username = txtUsername.getText().trim();
+String username = txtUsername.getText().trim();
     String password = new String(txtPassword.getPassword());
-    String role = cmbRole.getSelectedItem().toString();
+    String selectedRole = cmbRole.getSelectedItem().toString(); // Combobox: Organizer, Participant, Administrator
 
-    //Basic validation
+    // 1. Basic Form Validation
     if (username.isEmpty() || password.isEmpty()) {
         javax.swing.JOptionPane.showMessageDialog(this, 
             "Please enter both username and password.", 
-            "Login Validation", 
-            javax.swing.JOptionPane.WARNING_MESSAGE);
+            "Login Error", 
+            javax.swing.JOptionPane.ERROR_MESSAGE);
         return;
     }
 
-    //Simple hardcoded check (or hook up to your service layer)
-    if (username.equals("admin") && password.equals("1234")) {
+    // 2. Traversal Authentication Check via EventManager
+    if (manager.authenticate(username, password, selectedRole)) {
         javax.swing.JOptionPane.showMessageDialog(this, 
-            "Login Successful as " + role + "!");
-        
-        // Open MainFrame navigation dashboard
-        new MainFrame().setVisible(true);
-        this.dispose(); // Close login window
-    } else {
+            "Login successful as " + selectedRole + "!", 
+            "Welcome", 
+            javax.swing.JOptionPane.INFORMATION_MESSAGE);
+
+        // 3. Open Main Dashboard and Close Login Window
+        MainFrame mainDashboard = new MainFrame(manager, selectedRole);
+        mainDashboard.setLocationRelativeTo(null);
+        mainDashboard.setVisible(true);
+        this.dispose(); 
+    } 
+    
+    else 
+    {
         javax.swing.JOptionPane.showMessageDialog(this, 
-            "Invalid credentials. Please try again.", 
-            "Login Failed", 
+            "Invalid username, password, or role selected.", 
+            "Authentication Failed", 
             javax.swing.JOptionPane.ERROR_MESSAGE);
+            
+        txtPassword.setText("");
+        txtPassword.requestFocusInWindow();
     }
     }//GEN-LAST:event_btnLoginActionPerformed
 
     private void btnClearActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnClearActionPerformed
-        // TODO add your handling code here:
+    txtUsername.setText("");
+    txtPassword.setText("");
+    cmbRole.setSelectedIndex(0);
     }//GEN-LAST:event_btnClearActionPerformed
 
     /**

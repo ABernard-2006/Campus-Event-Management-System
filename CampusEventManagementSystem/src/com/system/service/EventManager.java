@@ -7,6 +7,7 @@ import classModel.Participant;
 import classModel.Registration;
 import classModel.Student;
 import classModel.Venue;
+import classModel.UserAccount;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -23,6 +24,28 @@ public class EventManager {
     private final List<Organizer> organizers = new ArrayList<>();
     private final List<Registration> registrations = new ArrayList<>();
     private final List<Attendance> attendances = new ArrayList<>();
+    private final List<UserAccount> userAccounts = new ArrayList<>();
+
+    public EventManager() {
+        // Pre-populate default accounts for testing
+        userAccounts.add(new UserAccount("admin", "admin123", "Administrator"));
+        userAccounts.add(new UserAccount("organizer", "org123", "Organizer"));
+        userAccounts.add(new UserAccount("part", "part123", "Participants"));
+    }
+
+    public void registerUser(UserAccount account) {
+        userAccounts.add(account);
+    }
+
+    // TRAVERSAL CHECK: Iterates through the stored list/array to confirm credentials
+    public boolean authenticate(String username, String password, String role) {
+        for (UserAccount account : userAccounts) {
+            if (account.matches(username, password, role)) {
+                return true; // Match found!
+            }
+        }
+        return false; // Traversed whole list with no match
+    }
 
     // ---------- EVENTS ----------
     public void addEvent(Event event) {
