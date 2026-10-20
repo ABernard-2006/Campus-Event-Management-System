@@ -147,6 +147,9 @@
           <Properties>
             <Property name="text" type="java.lang.String" value="Event Management"/>
           </Properties>
+          <Events>
+            <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btnNavEventsActionPerformed"/>
+          </Events>
         </Component>
         <Component class="javax.swing.JButton" name="btnNavRegistration">
           <Properties>

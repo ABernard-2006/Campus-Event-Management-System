@@ -3,7 +3,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
 package com.system.gui;
-
+import com.system.service.EventManager;
 /**
  *
  * @author Dhustine
@@ -13,14 +13,13 @@ import com.system.service.EventManager;
 public class MainFrame extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(MainFrame.class.getName());
-    private EventManager manager;
-    private String userRole;
-
+   
+ private final EventManager manager; 
     /**
      * Creates new form MainFrame
      */
     public MainFrame() {
-        initComponents();
+        this(new EventManager());
     }
     
     public MainFrame(EventManager manager, String userRole) 
@@ -46,6 +45,17 @@ public class MainFrame extends javax.swing.JFrame {
         }
     }
 
+    public MainFrame(EventManager manager) {      // used by the login screen
+    this.manager = manager;
+    initComponents();
+}
+    // Shows any panel inside the big content area. 
+private void showPanel(javax.swing.JPanel panel) {
+    pnlContent.removeAll();
+    pnlContent.add(panel, java.awt.BorderLayout.CENTER);
+    pnlContent.revalidate();
+    pnlContent.repaint();
+}
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -100,6 +110,7 @@ public class MainFrame extends javax.swing.JFrame {
         pnlSidebar.setPreferredSize(new java.awt.Dimension(200, 550));
 
         btnNavEvents.setText("Event Management");
+        btnNavEvents.addActionListener(this::btnNavEventsActionPerformed);
 
         btnNavRegistration.setText("Participant Registration");
 
@@ -171,6 +182,11 @@ public class MainFrame extends javax.swing.JFrame {
     private void btnLogoutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLogoutActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_btnLogoutActionPerformed
+
+    private void btnNavEventsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnNavEventsActionPerformed
+        // TODO add your handling code here:
+       showPanel(new EventPanel(manager));
+    }//GEN-LAST:event_btnNavEventsActionPerformed
 
     /**
      * @param args the command line arguments
