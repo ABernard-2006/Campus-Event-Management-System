@@ -8,14 +8,23 @@ package com.system.gui;
  *
  * @author Dhustine
  */
+import com.system.service.EventManager;
+
 public class LoginFrame extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(LoginFrame.class.getName());
+    private EventManager manager;
 
     /**
      * Creates new form LoginFrame
      */
     public LoginFrame() {
+        this.manager = new EventManager();
+        initComponents();
+    }
+    
+    public LoginFrame(EventManager manager) {
+        this.manager = manager;
         initComponents();
     }
 
@@ -32,7 +41,7 @@ public class LoginFrame extends javax.swing.JFrame {
         lblSubTitle = new javax.swing.JLabel();
         lblUsername = new javax.swing.JLabel();
         txtUsername = new javax.swing.JTextField();
-        jLabel1 = new javax.swing.JLabel();
+        lblPassword = new javax.swing.JLabel();
         txtPassword = new javax.swing.JPasswordField();
         lblRole = new javax.swing.JLabel();
         cmbRole = new javax.swing.JComboBox<>();
@@ -55,7 +64,7 @@ public class LoginFrame extends javax.swing.JFrame {
 
         txtUsername.addActionListener(this::txtUsernameActionPerformed);
 
-        jLabel1.setText("Password:");
+        lblPassword.setText("Password:");
 
         lblRole.setText("Login As:");
 
@@ -82,7 +91,7 @@ public class LoginFrame extends javax.swing.JFrame {
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(txtUsername))
                             .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
-                                .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 56, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(lblPassword, javax.swing.GroupLayout.PREFERRED_SIZE, 56, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(txtPassword, javax.swing.GroupLayout.PREFERRED_SIZE, 224, javax.swing.GroupLayout.PREFERRED_SIZE))
                             .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
@@ -119,7 +128,7 @@ public class LoginFrame extends javax.swing.JFrame {
                     .addComponent(txtUsername, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel1)
+                    .addComponent(lblPassword)
                     .addComponent(txtPassword, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
@@ -147,37 +156,49 @@ public class LoginFrame extends javax.swing.JFrame {
 
     private void btnLoginActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLoginActionPerformed
     
-    String username = txtUsername.getText().trim();
+String username = txtUsername.getText().trim();
     String password = new String(txtPassword.getPassword());
-    String role = cmbRole.getSelectedItem().toString();
+    String selectedRole = cmbRole.getSelectedItem().toString(); // Combobox: Organizer, Participant, Administrator
 
-    //Basic validation
+    // 1. Basic Form Validation
     if (username.isEmpty() || password.isEmpty()) {
         javax.swing.JOptionPane.showMessageDialog(this, 
             "Please enter both username and password.", 
-            "Login Validation", 
-            javax.swing.JOptionPane.WARNING_MESSAGE);
+            "Login Error", 
+            javax.swing.JOptionPane.ERROR_MESSAGE);
         return;
     }
 
-    //Simple hardcoded check (or hook up to your service layer)
-    if (username.equals("admin") && password.equals("1234")) {
+    // 2. Traversal Authentication Check via EventManager
+    if (manager.authenticate(username, password, selectedRole)) {
         javax.swing.JOptionPane.showMessageDialog(this, 
-            "Login Successful as " + role + "!");
-        
-        // Open MainFrame navigation dashboard
-        new MainFrame().setVisible(true);
-        this.dispose(); // Close login window
-    } else {
+            "Login successful as " + selectedRole + "!", 
+            "Welcome", 
+            javax.swing.JOptionPane.INFORMATION_MESSAGE);
+
+        // 3. Open Main Dashboard and Close Login Window
+        MainFrame mainDashboard = new MainFrame(manager, selectedRole);
+        mainDashboard.setLocationRelativeTo(null);
+        mainDashboard.setVisible(true);
+        this.dispose(); 
+    } 
+    
+    else 
+    {
         javax.swing.JOptionPane.showMessageDialog(this, 
-            "Invalid credentials. Please try again.", 
-            "Login Failed", 
+            "Invalid username, password, or role selected.", 
+            "Authentication Failed", 
             javax.swing.JOptionPane.ERROR_MESSAGE);
+            
+        txtPassword.setText("");
+        txtPassword.requestFocusInWindow();
     }
     }//GEN-LAST:event_btnLoginActionPerformed
 
     private void btnClearActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnClearActionPerformed
-        // TODO add your handling code here:
+    txtUsername.setText("");
+    txtPassword.setText("");
+    cmbRole.setSelectedIndex(0);
     }//GEN-LAST:event_btnClearActionPerformed
 
     /**
@@ -209,7 +230,7 @@ public class LoginFrame extends javax.swing.JFrame {
     private javax.swing.JButton btnClear;
     private javax.swing.JButton btnLogin;
     private javax.swing.JComboBox<String> cmbRole;
-    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel lblPassword;
     private javax.swing.JLabel lblRole;
     private javax.swing.JLabel lblSubTitle;
     private javax.swing.JLabel lblTitle;
