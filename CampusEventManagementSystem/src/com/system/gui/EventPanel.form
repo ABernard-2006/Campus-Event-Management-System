@@ -32,9 +32,9 @@
               <Component id="lblEventPanelTitle" min="-2" pref="780" max="-2" attributes="0"/>
           </Group>
           <Group type="102" alignment="0" attributes="0">
-              <EmptySpace min="-2" pref="101" max="-2" attributes="0"/>
+              <EmptySpace min="-2" pref="97" max="-2" attributes="0"/>
               <Group type="103" groupAlignment="1" attributes="0">
-                  <Group type="103" groupAlignment="0" max="-2" attributes="0">
+                  <Group type="103" alignment="1" groupAlignment="0" max="-2" attributes="0">
                       <Component id="lblMaxEventCap" alignment="0" min="-2" max="-2" attributes="0"/>
                       <Group type="102" alignment="0" attributes="0">
                           <Group type="103" groupAlignment="0" attributes="0">
@@ -60,8 +60,8 @@
                           </Group>
                       </Group>
                   </Group>
-                  <Group type="103" groupAlignment="0" max="-2" attributes="0">
-                      <Group type="102" attributes="0">
+                  <Group type="103" alignment="1" groupAlignment="0" max="-2" attributes="0">
+                      <Group type="102" alignment="0" attributes="0">
                           <Group type="103" groupAlignment="0" attributes="0">
                               <Component id="lblEventName" min="-2" max="-2" attributes="0"/>
                               <Component id="lblEventType" min="-2" max="-2" attributes="0"/>
@@ -69,11 +69,11 @@
                               <Group type="103" alignment="0" groupAlignment="1" max="-2" attributes="0">
                                   <Component id="lblEventVenue" max="32767" attributes="0"/>
                                   <Component id="lblEventMaterials" alignment="1" min="-2" max="-2" attributes="0"/>
-                                  <Component id="lblEventTopic" alignment="1" max="32767" attributes="0"/>
+                                  <Component id="lblEventTopic" alignment="1" min="-2" pref="51" max="-2" attributes="0"/>
                               </Group>
                           </Group>
                           <Group type="103" groupAlignment="0" attributes="0">
-                              <Group type="102" attributes="0">
+                              <Group type="102" alignment="0" attributes="0">
                                   <EmptySpace min="-2" pref="58" max="-2" attributes="0"/>
                                   <Component id="SpinEventDate" min="-2" pref="160" max="-2" attributes="0"/>
                                   <EmptySpace min="0" pref="0" max="32767" attributes="0"/>
@@ -82,8 +82,8 @@
                                   <EmptySpace max="32767" attributes="0"/>
                                   <Group type="103" groupAlignment="0" attributes="0">
                                       <Group type="103" alignment="1" groupAlignment="0" max="-2" attributes="0">
-                                          <Component id="txtEventTopic" pref="435" max="32767" attributes="0"/>
-                                          <Component id="txtEventMaterials" max="32767" attributes="0"/>
+                                          <Component id="txtEventTopic" max="32767" attributes="0"/>
+                                          <Component id="txtEventMaterials" min="-2" pref="435" max="-2" attributes="0"/>
                                       </Group>
                                       <Component id="txtEventName" alignment="1" min="-2" pref="435" max="-2" attributes="0"/>
                                       <Component id="cmbEventType" alignment="1" min="-2" pref="435" max="-2" attributes="0"/>
@@ -91,10 +91,10 @@
                               </Group>
                           </Group>
                       </Group>
-                      <Group type="102" attributes="0">
+                      <Group type="102" alignment="0" attributes="0">
                           <EmptySpace min="-2" pref="121" max="-2" attributes="0"/>
                           <Group type="103" groupAlignment="1" attributes="0">
-                              <Group type="102" attributes="0">
+                              <Group type="102" alignment="1" attributes="0">
                                   <Component id="lblEventTime" min="-2" max="-2" attributes="0"/>
                                   <EmptySpace type="separate" max="-2" attributes="0"/>
                                   <Component id="SpinEventType" min="-2" max="-2" attributes="0"/>
