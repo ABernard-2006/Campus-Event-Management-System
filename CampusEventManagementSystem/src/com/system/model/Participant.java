@@ -8,6 +8,24 @@ package com.system.model;
  *
  * @author bernard_07
  */
-public class Participant {
-    
+public abstract class Participant
+{
+    private int participantId;
+    private String fullName;
+    private String contactInfo;
+
+    public Participant(int participantId, String fullName, String contactInfo) 
+    {
+        this.participantId = participantId;
+        this.fullName = fullName;
+        this.contactInfo = contactInfo;
+    }
+
+    public int getParticipantId() { return participantId; }
+    public String getFullName() { return fullName; }
+    public String getContactInfo() { return contactInfo; }
+    public void setContactInfo(String contactInfo) { this.contactInfo = contactInfo; }
+
+    // Abstract method to be overridden by Student, Faculty, and Others
+    public abstract String displayDetails();
 }

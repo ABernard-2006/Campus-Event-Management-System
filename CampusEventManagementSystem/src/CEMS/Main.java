@@ -2,13 +2,13 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Main.java to edit this template
  */
-package campuseventmanagementsystem;
+package CEMS;
 
 /**
  *
  * @author bernard_07
  */
-public class CampusEventManagementSystem {
+public class Main {
 
     /**
      * @param args the command line arguments

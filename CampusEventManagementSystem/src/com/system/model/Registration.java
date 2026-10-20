@@ -4,7 +4,6 @@
  */
 package com.system.model;
 
-import campus.Main;
 import java.time.LocalDate;
 /**
  *
