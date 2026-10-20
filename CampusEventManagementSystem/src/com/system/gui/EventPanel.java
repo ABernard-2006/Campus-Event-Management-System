@@ -4,18 +4,136 @@
  */
 package com.system.gui;
 
+import classModel.*;
+import java.time.*;
+import classModel.Event;
+import classModel.Seminar;
+import classModel.Workshop;
+import com.system.service.EventManager;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import javax.swing.DefaultListModel;
+import javax.swing.JList;
+import javax.swing.JOptionPane;
+import javax.swing.JSpinner;
+import java.time.ZoneId;
+import classModel.Venue;
+
 /**
  *
  * @author Dhustine
  */
 public class EventPanel extends javax.swing.JPanel {
+private final EventManager manager;
+private final DefaultListModel<String> speakerModel = new DefaultListModel<>();
+private final JList<String> lstSpeakers = new JList<>(speakerModel);
 
     /**
      * Creates new form EventPanel
      */
     public EventPanel() {
-        initComponents();
+        this(null);
     }
+    
+    public EventPanel(EventManager manager) {   // used by MainFrame
+    this.manager = manager;
+    initComponents();
+    setupForm();
+    }
+    
+    private void setupForm() {
+    scrollpaneAddedSpeaker.setViewportView(lstSpeakers);
+    SpinEventDate.setEditor(new JSpinner.DateEditor(SpinEventDate, "yyyy-MM-dd"));
+    SpinEventType.setEditor(new JSpinner.DateEditor(SpinEventType, "hh:mm a"));
+
+    cmbEventType.addActionListener(e -> updateTypeFields());
+    btnAddSpeaker.addActionListener(e -> addSpeaker());
+    btnRemoveSpeaker.addActionListener(e -> removeSpeaker());
+    btnCerateEvent.addActionListener(e -> createEvent());
+    btnEventClear.addActionListener(e -> clearForm());
+    updateTypeFields();
+    }
+
+    private String selectedType() {
+    Object o = cmbEventType.getSelectedItem();
+    return o == null ? "" : o.toString().trim();
+}
+
+/** Dynamic switching: Workshop shows Topic + Materials, Seminar shows Subject only. */
+private void updateTypeFields() {
+    boolean workshop = selectedType().equals("Workshop");
+    lblEventTopic.setText(workshop ? "Topic:" : "Subject:");
+    lblEventMaterials.setVisible(workshop);
+    txtEventMaterials.setVisible(workshop);
+}
+
+private void addSpeaker() {
+    String s = txtEventSpeaker.getText().trim();
+    if (s.isEmpty()) { showError("Enter a speaker name."); return; }
+    speakerModel.addElement(s);
+    txtEventSpeaker.setText("");
+    txtEventSpeaker.requestFocusInWindow();
+}
+
+private void removeSpeaker() {
+    int i = lstSpeakers.getSelectedIndex();
+    if (i < 0) { showError("Select a speaker to remove."); return; }
+    speakerModel.remove(i);
+}
+
+private void clearForm() {
+    txtEventName.setText("");
+    txtEventVenue.setText("");
+    txtMaxEventCap.setText("");
+    txtEventSpeaker.setText("");
+    txtEventTopic.setText("");
+    txtEventMaterials.setText("");
+    speakerModel.clear();
+}
+
+private void createEvent() {
+    try {
+        if (manager == null) throw new IllegalStateException("No EventManager connected to this panel.");
+
+        // spinners hold java.util.Date -> convert to LocalDate / LocalTime
+        java.util.Date d = (java.util.Date) SpinEventDate.getValue();
+        java.util.Date t = (java.util.Date) SpinEventType.getValue();
+        LocalDate date = d.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        LocalTime time = t.toInstant().atZone(ZoneId.systemDefault()).toLocalTime()
+                          .withSecond(0).withNano(0);
+
+        int capacity;
+        try { capacity = Integer.parseInt(txtMaxEventCap.getText().trim()); }
+        catch (NumberFormatException ex) { throw new IllegalArgumentException("Max capacity must be a whole number."); }
+
+        if (speakerModel.isEmpty()) throw new IllegalArgumentException("Add at least one speaker.");
+        String speakers = String.join(", ", java.util.Collections.list(speakerModel.elements()));
+
+        Venue venue = new Venue(txtEventVenue.getText(), "TBA", capacity);
+
+        Event event;
+        String type = selectedType();
+        if (type.equals("Workshop")) {
+            event = new Workshop(txtEventName.getText(), date, time, venue,
+                    txtEventTopic.getText(), txtEventMaterials.getText(), speakers);
+        } else if (type.equals("Seminar")) {
+            event = new Seminar(txtEventName.getText(), date, time, venue,
+                    speakers, txtEventTopic.getText());
+        } else {
+            throw new IllegalArgumentException("Choose an event type (Workshop or Seminar).");
+        }
+
+        manager.addEvent(event);   // conflict rule is enforced here
+        JOptionPane.showMessageDialog(this, "Created: " + event.getEventName());
+        clearForm();
+    } catch (IllegalArgumentException | IllegalStateException ex) {
+        showError(ex.getMessage());
+    }
+}
+
+private void showError(String msg) {
+    JOptionPane.showMessageDialog(this, msg, "Cannot complete action", JOptionPane.ERROR_MESSAGE);
+}
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -47,7 +165,10 @@ public class EventPanel extends javax.swing.JPanel {
         SpinEventDate = new javax.swing.JSpinner();
         SpinEventType = new javax.swing.JSpinner();
         lblEventTime = new javax.swing.JLabel();
-        jComboBox2 = new javax.swing.JComboBox<>();
+        lblEventTopic = new javax.swing.JLabel();
+        txtEventTopic = new javax.swing.JTextField();
+        lblEventMaterials = new javax.swing.JLabel();
+        txtEventMaterials = new javax.swing.JTextField();
 
         setMaximumSize(new java.awt.Dimension(780, 550));
         setMinimumSize(new java.awt.Dimension(780, 550));
@@ -93,7 +214,11 @@ public class EventPanel extends javax.swing.JPanel {
 
         lblEventTime.setText("Time:");
 
-        jComboBox2.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "a.m", "p.m", " " }));
+        lblEventTopic.setText("Topic:");
+
+        txtEventTopic.addActionListener(this::txtEventTopicActionPerformed);
+
+        lblEventMaterials.setText("Materials:");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
@@ -104,50 +229,58 @@ public class EventPanel extends javax.swing.JPanel {
                 .addComponent(lblEventPanelTitle, javax.swing.GroupLayout.PREFERRED_SIZE, 780, javax.swing.GroupLayout.PREFERRED_SIZE))
             .addGroup(layout.createSequentialGroup()
                 .addGap(101, 101, 101)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addGroup(layout.createSequentialGroup()
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(lblEventName)
-                            .addComponent(lblEventType)
-                            .addComponent(lblEventDate)
-                            .addComponent(lblEventVenue)
-                            .addComponent(lblMaxEventCap))
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(layout.createSequentialGroup()
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(cmbEventType, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 435, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(txtEventName, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 435, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                            .addGroup(layout.createSequentialGroup()
-                                .addGap(49, 49, 49)
-                                .addComponent(SpinEventDate, javax.swing.GroupLayout.PREFERRED_SIZE, 160, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(0, 0, Short.MAX_VALUE))))
-                    .addGroup(layout.createSequentialGroup()
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(lblAddedSpeaker)
-                            .addComponent(lblEventSpeaker))
-                        .addGap(26, 26, 26)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                        .addComponent(lblMaxEventCap)
+                        .addGroup(layout.createSequentialGroup()
+                            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                .addComponent(lblAddedSpeaker)
+                                .addComponent(lblEventSpeaker))
+                            .addGap(26, 26, 26)
+                            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                .addComponent(txtMaxEventCap, javax.swing.GroupLayout.PREFERRED_SIZE, 435, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGroup(layout.createSequentialGroup()
+                                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                                        .addComponent(txtEventSpeaker, javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addComponent(scrollpaneAddedSpeaker, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 300, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addComponent(btnRemoveSpeaker)
+                                        .addComponent(btnEventClear, javax.swing.GroupLayout.PREFERRED_SIZE, 128, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(btnAddSpeaker, javax.swing.GroupLayout.PREFERRED_SIZE, 128, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(btnCerateEvent, javax.swing.GroupLayout.PREFERRED_SIZE, 128, javax.swing.GroupLayout.PREFERRED_SIZE))))))
+                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                        .addGroup(layout.createSequentialGroup()
+                            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                .addComponent(lblEventName)
+                                .addComponent(lblEventType)
+                                .addComponent(lblEventDate)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                                    .addComponent(lblEventVenue, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                    .addComponent(lblEventMaterials)
+                                    .addComponent(lblEventTopic, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                .addGroup(layout.createSequentialGroup()
+                                    .addGap(58, 58, 58)
+                                    .addComponent(SpinEventDate, javax.swing.GroupLayout.PREFERRED_SIZE, 160, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addGap(0, 0, Short.MAX_VALUE))
+                                .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                            .addComponent(txtEventTopic, javax.swing.GroupLayout.DEFAULT_SIZE, 435, Short.MAX_VALUE)
+                                            .addComponent(txtEventMaterials))
+                                        .addComponent(txtEventName, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 435, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(cmbEventType, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 435, javax.swing.GroupLayout.PREFERRED_SIZE)))))
+                        .addGroup(layout.createSequentialGroup()
+                            .addGap(121, 121, 121)
                             .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                                 .addGroup(layout.createSequentialGroup()
                                     .addComponent(lblEventTime)
                                     .addGap(18, 18, 18)
                                     .addComponent(SpinEventType, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                    .addComponent(jComboBox2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                    .addComponent(txtEventVenue)
-                                    .addComponent(txtMaxEventCap, javax.swing.GroupLayout.PREFERRED_SIZE, 435, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                            .addGroup(layout.createSequentialGroup()
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                                    .addComponent(txtEventSpeaker, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 300, Short.MAX_VALUE)
-                                    .addComponent(scrollpaneAddedSpeaker, javax.swing.GroupLayout.Alignment.LEADING))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(btnRemoveSpeaker)
-                                    .addComponent(btnEventClear, javax.swing.GroupLayout.PREFERRED_SIZE, 128, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(btnAddSpeaker, javax.swing.GroupLayout.PREFERRED_SIZE, 128, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(btnCerateEvent, javax.swing.GroupLayout.PREFERRED_SIZE, 128, javax.swing.GroupLayout.PREFERRED_SIZE))))))
+                                    .addGap(78, 78, 78))
+                                .addComponent(txtEventVenue, javax.swing.GroupLayout.PREFERRED_SIZE, 435, javax.swing.GroupLayout.PREFERRED_SIZE)))))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
@@ -168,13 +301,20 @@ public class EventPanel extends javax.swing.JPanel {
                     .addComponent(lblEventDate)
                     .addComponent(SpinEventDate, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(SpinEventType, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(lblEventTime)
-                    .addComponent(jComboBox2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(lblEventTime))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(lblEventVenue)
                     .addComponent(txtEventVenue, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(txtEventTopic, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(lblEventTopic))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(lblEventMaterials)
+                    .addComponent(txtEventMaterials, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(9, 9, 9)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(lblMaxEventCap)
                     .addComponent(txtMaxEventCap, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -194,7 +334,7 @@ public class EventPanel extends javax.swing.JPanel {
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(btnEventClear))
                     .addComponent(scrollpaneAddedSpeaker, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(217, Short.MAX_VALUE))
+                .addContainerGap(158, Short.MAX_VALUE))
         );
     }// </editor-fold>//GEN-END:initComponents
 
@@ -210,6 +350,10 @@ public class EventPanel extends javax.swing.JPanel {
         // TODO add your handling code here:
     }//GEN-LAST:event_txtMaxEventCapActionPerformed
 
+    private void txtEventTopicActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtEventTopicActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_txtEventTopicActionPerformed
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JSpinner SpinEventDate;
@@ -219,19 +363,22 @@ public class EventPanel extends javax.swing.JPanel {
     private javax.swing.JButton btnEventClear;
     private javax.swing.JButton btnRemoveSpeaker;
     private javax.swing.JComboBox<String> cmbEventType;
-    private javax.swing.JComboBox<String> jComboBox2;
     private javax.swing.JLabel lblAddedSpeaker;
     private javax.swing.JLabel lblEventDate;
+    private javax.swing.JLabel lblEventMaterials;
     private javax.swing.JLabel lblEventName;
     private javax.swing.JLabel lblEventPanelTitle;
     private javax.swing.JLabel lblEventSpeaker;
     private javax.swing.JLabel lblEventTime;
+    private javax.swing.JLabel lblEventTopic;
     private javax.swing.JLabel lblEventType;
     private javax.swing.JLabel lblEventVenue;
     private javax.swing.JLabel lblMaxEventCap;
     private javax.swing.JScrollPane scrollpaneAddedSpeaker;
+    private javax.swing.JTextField txtEventMaterials;
     private javax.swing.JTextField txtEventName;
     private javax.swing.JTextField txtEventSpeaker;
+    private javax.swing.JTextField txtEventTopic;
     private javax.swing.JTextField txtEventVenue;
     private javax.swing.JTextField txtMaxEventCap;
     // End of variables declaration//GEN-END:variables
