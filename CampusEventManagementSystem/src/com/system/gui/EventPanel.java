@@ -93,7 +93,7 @@ private void clearForm() {
 
 private void createEvent() {
     try {
-        if (manager == null) throw new IllegalStateException("No EventManager connected to this panel.");
+         if (manager == null) throw new IllegalStateException("No EventManager connected to this panel.");
 
         // spinners hold java.util.Date -> convert to LocalDate / LocalTime
         java.util.Date d = (java.util.Date) SpinEventDate.getValue();
@@ -102,25 +102,45 @@ private void createEvent() {
         LocalTime time = t.toInstant().atZone(ZoneId.systemDefault()).toLocalTime()
                           .withSecond(0).withNano(0);
 
+        String eventName = txtEventName.getText().trim();
+        String venueName = txtEventVenue.getText().trim();
+        String topic = txtEventTopic.getText().trim();
+        String materials = txtEventMaterials.getText().trim();
+        String type = selectedType();
+
+        if (eventName.isEmpty()) throw new IllegalArgumentException("Event name is required.");
+        if (venueName.isEmpty()) throw new IllegalArgumentException("Venue is required.");
+        if (!type.equals("Workshop") && !type.equals("Seminar"))
+            throw new IllegalArgumentException("Choose an event type (Workshop or Seminar).");
+        if (date.isBefore(LocalDate.now()))
+            throw new IllegalArgumentException("Event date cannot be in the past.");
+
         int capacity;
-        try { capacity = Integer.parseInt(txtMaxEventCap.getText().trim()); }
-        catch (NumberFormatException ex) { throw new IllegalArgumentException("Max capacity must be a whole number."); }
+        try {
+            String capacityText = txtMaxEventCap.getText().trim();
+            if (capacityText.isEmpty()) throw new NumberFormatException();
+            capacity = Integer.parseInt(capacityText);
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("Max capacity is required and must be a whole number.");
+        }
+        if (capacity <= 0) throw new IllegalArgumentException("Max capacity must be greater than zero.");
 
         if (speakerModel.isEmpty()) throw new IllegalArgumentException("Add at least one speaker.");
+        if (type.equals("Workshop")) {
+            if (topic.isEmpty()) throw new IllegalArgumentException("Workshop topic is required.");
+            if (materials.isEmpty()) throw new IllegalArgumentException("Workshop materials are required.");
+        } else if (topic.isEmpty()) {
+            throw new IllegalArgumentException("Seminar subject is required.");
+        }
         String speakers = String.join(", ", java.util.Collections.list(speakerModel.elements()));
 
-        Venue venue = new Venue(txtEventVenue.getText(), "TBA", capacity);
+        Venue venue = new Venue(venueName, "TBA", capacity);
 
         Event event;
-        String type = selectedType();
         if (type.equals("Workshop")) {
-            event = new Workshop(txtEventName.getText(), date, time, venue,
-                    txtEventTopic.getText(), txtEventMaterials.getText(), speakers);
-        } else if (type.equals("Seminar")) {
-            event = new Seminar(txtEventName.getText(), date, time, venue,
-                    speakers, txtEventTopic.getText());
+            event = new Workshop(eventName, date, time, venue, topic, materials, speakers);
         } else {
-            throw new IllegalArgumentException("Choose an event type (Workshop or Seminar).");
+            event = new Seminar(eventName, date, time, venue, speakers, topic);
         }
 
         manager.addEvent(event);   // conflict rule is enforced here

@@ -11,8 +11,11 @@ import java.time.LocalDate;
  * @author ASUS2
  */
 public class Registration {
-    public static final String REGISTERED = "Registered";
+     public static final String REGISTERED = "Registered";
     public static final String CANCELLED = "Cancelled";
+
+    // Own counter: registration IDs count 1, 2, 3... independent of every other class.
+    private static int nextRegistrationId = 1;
 
     private final int registrationId;
     private final Participant participant;
@@ -23,7 +26,7 @@ public class Registration {
     public Registration(Participant participant, Event event, LocalDate registrationDate, String status) {
         if (participant == null || event == null)
             throw new IllegalArgumentException("Participant and event are required.");
-        this.registrationId = Main.generateId();
+        this.registrationId = nextRegistrationId++;
         this.participant = participant;
         this.event = event;
         this.registrationDate = registrationDate == null ? LocalDate.now() : registrationDate;

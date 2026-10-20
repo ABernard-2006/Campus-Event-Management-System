@@ -111,6 +111,23 @@ private void registerParticipant() {
         String extra = txtRegExtra.getText().trim();
         String extra2 = txtRegExtra2.getText().trim();
 
+        if (type.isEmpty() || !(type.equals("Student") || type.equals("Faculty") || type.equals("Others")))
+            throw new IllegalArgumentException("Choose a participant type.");
+        if (name.isEmpty()) throw new IllegalArgumentException("Participant name is required.");
+        if (contact.isEmpty()) throw new IllegalArgumentException("BU/email address is required.");
+        if (contact.matches(".*\\s+.*"))
+            throw new IllegalArgumentException("BU/email address must not contain spaces.");
+        if (type.equals("Student")) {
+            if (number.isEmpty()) throw new IllegalArgumentException("Student number is required.");
+            if (extra.isEmpty()) throw new IllegalArgumentException("Program is required.");
+        } else if (type.equals("Faculty")) {
+            if (number.isEmpty()) throw new IllegalArgumentException("Faculty ID is required.");
+            if (extra.isEmpty()) throw new IllegalArgumentException("Department is required.");
+            if (extra2.isEmpty()) throw new IllegalArgumentException("Position is required.");
+        } else if (extra.isEmpty()) {
+            throw new IllegalArgumentException("Affiliation / company is required.");
+        }
+
         Participant p = findExisting(type, number, name);
         boolean isNew = (p == null);
         if (isNew) {
@@ -130,8 +147,8 @@ private void registerParticipant() {
         clearForm();
         loadTable("");
     } catch (IllegalArgumentException | IllegalStateException ex) {
-        JOptionPane.showMessageDialog(this, ex.getMessage(), "Cannot complete action",
-                JOptionPane.ERROR_MESSAGE);
+        JOptionPane.showMessageDialog(this, ex.getMessage(), "Invalid or Missing Input",
+                JOptionPane.WARNING_MESSAGE);
     }
 }
 
