@@ -14,12 +14,14 @@ import java.time.LocalTime;
 public class Workshop extends Event {
     private String topic;
     private String materials;
+    private String speakerName;
 
     public Workshop(String eventName, LocalDate date, LocalTime startTime, Venue venue,
-                    String topic, String materials) {
+                    String topic, String materials, String speakerName) {
         super(Main.generateId(), eventName, date, startTime, venue);
         this.topic = require(topic, "Topic");
         this.materials = require(materials, "Materials");
+        this.speakerName = require(speakerName, "Speaker");
     }
 
     private static String require(String v, String field) {
@@ -29,12 +31,16 @@ public class Workshop extends Event {
 
     public String getTopic() { return topic; }
     public String getMaterials() { return materials; }
+    public String getSpeaker(){ return speakerName; }
+    public void String setSpeakerName(String speakerName){
+        this.speakerName = require(speakerName, "Speaker");
+    }
 
     @Override public String getEventType() { return "Workshop"; }
 
     @Override
     public String displayDetails() {
-        return baseDetails() + "\nTopic  : " + topic + "\nBring  : " + materials
+        return baseDetails() + "\nTopic  : " + topic + "\nSpeaker: " + speakerName + "\nBring  : " + materials
                 + "\nFormat : Hands-on activity";
     }
 }
