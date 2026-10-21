@@ -1,0 +1,33 @@
+[33me15f4c1[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/oop-logic[m[33m, [m[1;31morigin/feature/oop-logic[m[33m)[m HEAD@{0}: checkout: moving from main to feature/oop-logic
+[33mb064018[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m HEAD@{1}: pull origin main: Fast-forward
+[33mfc0bdbd[m HEAD@{2}: checkout: moving from feature/oop-logic to main
+[33me15f4c1[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/oop-logic[m[33m, [m[1;31morigin/feature/oop-logic[m[33m)[m HEAD@{3}: commit: Add try-catch condition in Rgeistration and Event Panel
+[33m1effb90[m HEAD@{4}: commit: Integrate registration panel
+[33mfc0bdbd[m HEAD@{5}: merge main: Fast-forward
+[33md6f36fc[m HEAD@{6}: checkout: moving from main to feature/oop-logic
+[33mfc0bdbd[m HEAD@{7}: pull origin main: Fast-forward
+[33m118655d[m HEAD@{8}: checkout: moving from feature/oop-logic to main
+[33md6f36fc[m HEAD@{9}: commit: Integrate Event Panel to EventManager
+[33m118655d[m HEAD@{10}: merge main: Fast-forward
+[33m7514dda[m HEAD@{11}: checkout: moving from main to feature/oop-logic
+[33m118655d[m HEAD@{12}: pull origin main: Fast-forward
+[33m7514dda[m HEAD@{13}: checkout: moving from feature/oop-logic to main
+[33m7514dda[m HEAD@{14}: merge main: Fast-forward
+[33me7bb17b[m HEAD@{15}: checkout: moving from main to feature/oop-logic
+[33m7514dda[m HEAD@{16}: checkout: moving from feature/oop-logic to main
+[33me7bb17b[m HEAD@{17}: checkout: moving from main to feature/oop-logic
+[33m7514dda[m HEAD@{18}: pull origin main: Fast-forward
+[33m391c8ac[m HEAD@{19}: checkout: moving from feature/oop-logic to main
+[33me7bb17b[m HEAD@{20}: commit: Add speakerName as field of Workshop class
+[33mcbe09c3[m HEAD@{21}: commit: Add changes
+[33m090ced9[m HEAD@{22}: commit: Add Event hierarchy, EventManager, Registration, Attendance
+[33m482b211[m HEAD@{23}: checkout: moving from main to feature/oop-logic
+[33m391c8ac[m HEAD@{24}: pull origin main: Fast-forward
+[33m052bb9a[m HEAD@{25}: checkout: moving from feature/oop-logic to main
+[33m482b211[m HEAD@{26}: checkout: moving from main to feature/oop-logic
+[33m052bb9a[m HEAD@{27}: pull origin main: Fast-forward
+[33m482b211[m HEAD@{28}: checkout: moving from feature/oop-logic to main
+[33m482b211[m HEAD@{29}: checkout: moving from main to feature/oop-logic
+[33m482b211[m HEAD@{30}: pull origin main: Fast-forward
+[33m30cf904[m HEAD@{31}: checkout: moving from main to main
+[33m30cf904[m HEAD@{32}: clone: from https://github.com/ABernard-2006/Campus-Event-Management-System.git
