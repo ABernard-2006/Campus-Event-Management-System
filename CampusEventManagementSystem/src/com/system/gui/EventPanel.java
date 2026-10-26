@@ -190,6 +190,7 @@ private void showError(String msg) {
         lblEventMaterials = new javax.swing.JLabel();
         txtEventMaterials = new javax.swing.JTextField();
 
+        setBackground(new java.awt.Color(247, 247, 252));
         setMaximumSize(new java.awt.Dimension(780, 550));
         setMinimumSize(new java.awt.Dimension(780, 550));
         setPreferredSize(new java.awt.Dimension(780, 550));

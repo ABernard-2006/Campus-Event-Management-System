@@ -10,7 +10,7 @@ package CEMS;
  */
 
 
-import com.system.gui.MainFrame;
+import com.system.gui.Dashboard;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
