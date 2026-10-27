@@ -58,6 +58,13 @@ public class UpcomingEventsPanel extends JPanel {
     /** Call this with your real events. */
     public void setEvents(List<String> names, List<LocalDate> dates) {
         list.removeAll();
+        if (names.isEmpty()) {
+            JLabel none = new JLabel("No upcoming events.");
+            none.setFont(BASE.deriveFont(12f));
+            none.setForeground(SUB);
+            none.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+            list.add(none);
+        }
         for (int i = 0; i < names.size(); i++) {
             list.add(new EventRow(names.get(i), dates.get(i), i < names.size() - 1));
         }
@@ -181,4 +188,4 @@ public class UpcomingEventsPanel extends JPanel {
         g2.dispose();
         super.paintComponent(g);
     }
-}
+}

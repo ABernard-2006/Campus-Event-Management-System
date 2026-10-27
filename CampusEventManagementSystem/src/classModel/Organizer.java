@@ -16,12 +16,23 @@ import java.time.LocalTime;
  * Represents a person responsible for planning and managing campus events.
  */
 public class Organizer {
+    private String username;          // the login account this organizer belongs to (may be null)
     private Organization organization;
     private String position;
 
     public Organizer(Organization organization, String position) {
         this.organization = requireOrganization(organization);
         this.position = require(position, "Position");
+    }
+
+    /** Organizer linked to a login account, so it can be saved and found again. */
+    public Organizer(String username, Organization organization, String position) {
+        this(organization, position);
+        this.username = require(username, "Username");
+    }
+
+    public String getUsername() {
+        return username;
     }
 
     private static String require(String v, String field) {

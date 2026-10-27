@@ -16,7 +16,7 @@ public class ProfileHeaderPanel extends JPanel {
     public enum Role {
         PARTICIPANT("Participant"),
         STUDENT("Student"),
-        ADMIN("Admin"),
+        ADMIN("Administrator"),
         ORGANIZER("Organizer");
 
         private final String label;
@@ -26,6 +26,7 @@ public class ProfileHeaderPanel extends JPanel {
         /** Converts text from your database/login (e.g. "admin", "Student") into a Role. */
         public static Role fromString(String s) {
             if (s == null) return PARTICIPANT;
+            if (s.trim().equalsIgnoreCase("Admin")) return ADMIN;   // older spelling
             for (Role r : values()) {
                 if (r.name().equalsIgnoreCase(s.trim()) || r.label.equalsIgnoreCase(s.trim())) return r;
             }
@@ -191,4 +192,4 @@ public class ProfileHeaderPanel extends JPanel {
             g2.dispose();
         }
     }
-}
+}

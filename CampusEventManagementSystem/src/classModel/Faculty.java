@@ -1,46 +1,32 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package classModel;
 
-/**
- *
- * @author bernard_07
- */
+public class Faculty extends Participant {
+    private final String facultyNumber;
+    private final String department;
+    private final String position;
 
-public class Faculty extends Participant 
-{
-    private String facultyNumber;
-    private String department;
-    private String position;
-
-    public Faculty(String fullName, String contactInfo, String facultyNumber, String department, String position) 
-    {
+    public Faculty(String fullName, String contactInfo, String facultyNumber, String department, String position) {
         super(fullName, contactInfo);
-        this.facultyNumber = facultyNumber;
-        this.department = department;
-        this.position = position;
+        this.facultyNumber = requireText(facultyNumber, "Faculty ID");
+        this.department = requireText(department, "Department");
+        this.position = requireText(position, "Position");
     }
 
-    public String getFacultyNumber() 
-    { 
-        return facultyNumber; 
+    /** Rebuilds a saved faculty member. */
+    public Faculty(int participantId, String fullName, String contactInfo,
+                   String facultyNumber, String department, String position) {
+        super(participantId, fullName, contactInfo);
+        this.facultyNumber = requireText(facultyNumber, "Faculty ID");
+        this.department = requireText(department, "Department");
+        this.position = requireText(position, "Position");
     }
-    
-    public String getDepartment() 
-    { 
-        return department; 
-    }
-    
-    public String getPosition() 
-    { 
-        return position; 
-    }
+
+    public String getFacultyNumber() { return facultyNumber; }
+    public String getDepartment() { return department; }
+    public String getPosition() { return position; }
 
     @Override
-    public String displayDetails() 
-    {
+    public String displayDetails() {
         return "[FACULTY] " + getFullName() + " | Dept: " + department + " | Pos: " + position;
     }
 }

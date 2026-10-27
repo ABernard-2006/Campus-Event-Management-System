@@ -4,7 +4,11 @@ import java.awt.*;
 import java.awt.event.*;
 import java.time.*;
 import java.time.format.TextStyle;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
+import java.util.function.Consumer;
 import javax.swing.*;
 
 public class CalendarPanel extends JPanel {
@@ -19,6 +23,8 @@ public class CalendarPanel extends JPanel {
     private LocalDate selected = LocalDate.now();
     private final JLabel monthLabel = new JLabel();
     private final JPanel grid = new JPanel(new GridLayout(0, 7, 4, 4));
+    private final Set<LocalDate> eventDates = new HashSet<>();   // days that get a small dot
+    private Consumer<LocalDate> onDateSelected;
 
     public CalendarPanel() {
         setOpaque(false);
@@ -68,6 +74,7 @@ public class CalendarPanel extends JPanel {
             }
         };
         b.setPreferredSize(new Dimension(28, 28));
+        b.setMargin(new Insets(0, 0, 0, 0));     // otherwise some look-and-feels show "..." instead of < >
         b.setContentAreaFilled(false);
         b.setBorderPainted(false);
         b.setFocusPainted(false);
@@ -120,6 +127,7 @@ public class CalendarPanel extends JPanel {
                     selected = date;
                     if (outside) month = YearMonth.from(date);
                     rebuild();
+                    if (onDateSelected != null) onDateSelected.accept(date);
                 }
                 @Override public void mouseEntered(MouseEvent e) { hover = true;  repaint(); }
                 @Override public void mouseExited(MouseEvent e)  { hover = false; repaint(); }
@@ -149,6 +157,11 @@ public class CalendarPanel extends JPanel {
             FontMetrics fm = g2.getFontMetrics();
             g2.drawString(s, (getWidth() - fm.stringWidth(s)) / 2,
                     (getHeight() - fm.getHeight()) / 2 + fm.getAscent());
+
+            if (eventDates.contains(date)) {                 // dot = at least one event that day
+                g2.setColor(isSel ? Color.WHITE : ACCENT);
+                g2.fillOval(getWidth() / 2 - 2, y + size - 7, 5, 5);
+            }
             g2.dispose();
         }
     }
@@ -169,4 +182,14 @@ public class CalendarPanel extends JPanel {
     }
 
     public LocalDate getSelectedDate() { return selected; }
-}
+
+    /** Marks every date in the collection with a dot. Pass the dates of the real events. */
+    public void setEventDates(Collection<LocalDate> dates) {
+        eventDates.clear();
+        if (dates != null) eventDates.addAll(dates);
+        rebuild();
+    }
+
+    /** Called with the clicked date each time the user picks a day. */
+    public void setOnDateSelected(Consumer<LocalDate> listener) { onDateSelected = listener; }
+}

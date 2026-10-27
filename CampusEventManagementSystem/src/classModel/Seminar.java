@@ -1,23 +1,24 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package classModel;
 
 import CEMS.Main;
 import java.time.LocalDate;
 import java.time.LocalTime;
-/**
- *
- * @author ASUS2
- */
+
+/** A presentation-based event. */
 public class Seminar extends Event {
     private String speakerName;
     private String subject;
 
+    /** Creates a NEW seminar with an automatically generated ID. */
     public Seminar(String eventName, LocalDate date, LocalTime startTime, Venue venue,
                    String speakerName, String subject) {
-        super(Main.generateId(), eventName, date, startTime, venue);
+        this(Main.generateEventId(), eventName, date, startTime, venue, speakerName, subject);
+    }
+
+    /** Rebuilds a seminar that was saved earlier (keeps its saved ID). */
+    public Seminar(int eventId, String eventName, LocalDate date, LocalTime startTime, Venue venue,
+                   String speakerName, String subject) {
+        super(eventId, eventName, date, startTime, venue);
         this.speakerName = require(speakerName, "Speaker name");
         this.subject = require(subject, "Subject");
     }
@@ -30,7 +31,17 @@ public class Seminar extends Event {
     public String getSpeakerName() { return speakerName; }
     public String getSubject() { return subject; }
 
+    @Override public String getSpeakerNames() { return speakerName; }
+    @Override public String getTopicOrSubject() { return subject; }
     @Override public String getEventType() { return "Seminar"; }
+
+    @Override
+    public void updateTypeDetails(String speakers, String topicOrSubject, String materials) {
+        String s = require(speakers, "Speaker name");
+        String t = require(topicOrSubject, "Subject");
+        this.speakerName = s;      // materials are not used by seminars
+        this.subject = t;
+    }
 
     @Override
     public String displayDetails() {

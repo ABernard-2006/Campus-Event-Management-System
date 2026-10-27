@@ -8,27 +8,93 @@ package com.system.gui;
  *
  * @author Dhustine
  */
+import classModel.UserAccount;
 import com.system.service.EventManager;
+import com.system.service.LoginPreferences;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
 
 public class LoginFrame extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(LoginFrame.class.getName());
-    private EventManager manager;
+
+    private static final int MAX_FAILED_ATTEMPTS = 5;
+    private static final int LOCKOUT_SECONDS = 15;
+
+    private final EventManager manager;
+    private int failedAttempts = 0;
 
     /**
      * Creates new form LoginFrame
      */
     
     public LoginFrame() {
-        this.manager = new EventManager();
-        initComponents();
+        this(new EventManager());
     }
     
     public LoginFrame(EventManager manager) 
     {
-         this.manager = manager;
+        this.manager = manager;
         initComponents();
         getContentPane().setBackground(new java.awt.Color(245, 245, 247));
+        setUpLogin();
+    }
+
+    // ------------------------------------------------------------------
+    //  Hand-written setup (kept outside initComponents so Design view can't overwrite it)
+    // ------------------------------------------------------------------
+    private void setUpLogin() {
+        lblEmail.setText("Username or Email");
+        // The role list: Administrator, Organizer, Participant (the old blank " " item is gone).
+        cmdParticipants.setModel(new javax.swing.DefaultComboBoxModel<>(
+                new String[] { UserAccount.ROLE_ADMIN, UserAccount.ROLE_ORGANIZER, UserAccount.ROLE_PARTICIPANT }));
+        cmdParticipants.setSelectedItem(UserAccount.ROLE_PARTICIPANT);
+
+        getRootPane().setDefaultButton(btnLogin);          // pressing Enter logs in
+
+        // "Don't have an account? Register" link
+        lblRegister.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
+        lblRegister.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                openSignUp();
+            }
+        });
+
+        // Remember me: bring back the saved username and role (never a password)
+        String[] remembered = LoginPreferences.load(dataDirectory());
+        if (remembered != null) {
+            txtEmail.setText(remembered[0]);
+            if (!remembered[1].isEmpty()) cmdParticipants.setSelectedItem(remembered[1]);
+            checkRemember.setSelected(true);
+            javax.swing.SwingUtilities.invokeLater(() -> txtPassword.requestFocusInWindow());
+        }
+    }
+
+    private Path dataDirectory() {
+        return Paths.get(manager.getDataDirectory());
+    }
+
+    // ------------------------------------------------------------------
+    //  Moving between the login and sign-up windows
+    // ------------------------------------------------------------------
+    private void openSignUp() {
+        SignInFrame signUp = new SignInFrame(manager, this);
+        signUp.setLocationRelativeTo(this);
+        setVisible(false);
+        signUp.setVisible(true);
+    }
+
+    /** Called by the sign-up window when it closes. Optionally fills in the new account's details. */
+    public void returnFromSignUp(String identifier, String role) {
+        if (identifier != null) {
+            txtEmail.setText(identifier);
+            if (role != null) cmdParticipants.setSelectedItem(role);
+            txtPassword.setText("");
+        }
+        setVisible(true);
+        javax.swing.SwingUtilities.invokeLater(() -> txtPassword.requestFocusInWindow());
     }
 
     /**
@@ -90,6 +156,7 @@ public class LoginFrame extends javax.swing.JFrame {
         btnLogin.setBackground(new java.awt.Color(51, 51, 51));
         btnLogin.setForeground(new java.awt.Color(255, 255, 255));
         btnLogin.setText("Login");
+        btnLogin.addActionListener(this::btnLoginActionPerformed);
 
         javax.swing.GroupLayout pnlCardLayout = new javax.swing.GroupLayout(pnlCard);
         pnlCard.setLayout(pnlCardLayout);
@@ -150,6 +217,59 @@ public class LoginFrame extends javax.swing.JFrame {
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
+
+    private void btnLoginActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLoginActionPerformed
+        String identifier = txtEmail.getText().trim();
+        char[] typedPassword = txtPassword.getPassword();
+        String role = (String) cmdParticipants.getSelectedItem();
+        try {
+            UserAccount account = manager.authenticate(identifier, new String(typedPassword), role);
+            if (account == null) {
+                handleFailedLogin();
+                return;
+            }
+            failedAttempts = 0;
+            if (checkRemember.isSelected()) {
+                LoginPreferences.save(dataDirectory(), account.getUsername(), account.getRole());
+            } else {
+                LoginPreferences.clear(dataDirectory());
+            }
+            openDashboard(account);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            // empty fields, no accounts yet, or a storage problem
+            javax.swing.JOptionPane.showMessageDialog(this, ex.getMessage(), "Login", javax.swing.JOptionPane.WARNING_MESSAGE);
+        } finally {
+            Arrays.fill(typedPassword, '\0');
+        }
+    }//GEN-LAST:event_btnLoginActionPerformed
+
+    /** One message for every kind of mismatch, so it does not reveal which part was wrong. */
+    private void handleFailedLogin() {
+        failedAttempts++;
+        txtPassword.setText("");
+        if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+            failedAttempts = 0;
+            btnLogin.setEnabled(false);
+            javax.swing.Timer unlock = new javax.swing.Timer(LOCKOUT_SECONDS * 1000, e -> btnLogin.setEnabled(true));
+            unlock.setRepeats(false);
+            unlock.start();
+            javax.swing.JOptionPane.showMessageDialog(this,
+                    "Too many failed attempts. Please wait " + LOCKOUT_SECONDS + " seconds and try again.",
+                    "Login", javax.swing.JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        javax.swing.JOptionPane.showMessageDialog(this,
+                "Incorrect username/email, password or role.",
+                "Login failed", javax.swing.JOptionPane.ERROR_MESSAGE);
+        txtPassword.requestFocusInWindow();
+    }
+
+    private void openDashboard(UserAccount account) {
+        Dashboard dashboard = new Dashboard(manager, account);
+        dashboard.setLocationRelativeTo(null);
+        dashboard.setVisible(true);
+        dispose();
+    }
 
     /**
      * @param args the command line arguments

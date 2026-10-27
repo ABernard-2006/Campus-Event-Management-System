@@ -1,33 +1,38 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package classModel;
-
-/**
- *
- * @author bernard_07
- */
 
 import CEMS.Main;
 
+/** Common information for every kind of participant. */
 public abstract class Participant {
-    private int participantId;
+    private final int participantId;
     private String fullName;
     private String contactInfo;
 
-    // Constructor automatically generates participantId
+    /** Creates a NEW participant with an automatically generated ID. */
     public Participant(String fullName, String contactInfo) {
-        this.participantId = Main.generateParticipantId(); // Auto-generated ID[cite: 8]
-        this.fullName = fullName;
-        this.contactInfo = contactInfo;
+        this(Main.generateParticipantId(), fullName, contactInfo);
+    }
+
+    /** Rebuilds a participant that was saved earlier (keeps its saved ID). */
+    protected Participant(int participantId, String fullName, String contactInfo) {
+        if (participantId <= 0) throw new IllegalArgumentException("Participant ID must be a positive number.");
+        this.participantId = participantId;
+        Main.syncParticipantId(participantId);
+        this.fullName = requireText(fullName, "Participant name");
+        this.contactInfo = requireText(contactInfo, "Contact info");
+    }
+
+    /** Shared helper for subclasses: trims the text and rejects empty values. */
+    protected static String requireText(String value, String field) {
+        if (value == null || value.trim().isEmpty()) throw new IllegalArgumentException(field + " is required.");
+        return value.trim();
     }
 
     public int getParticipantId() { return participantId; }
     public String getFullName() { return fullName; }
     public String getContactInfo() { return contactInfo; }
-    public void setContactInfo(String contactInfo) { this.contactInfo = contactInfo; }
+    public void setContactInfo(String contactInfo) { this.contactInfo = requireText(contactInfo, "Contact info"); }
 
-    // Abstract method to be overridden by subclasses[cite: 7, 9]
+    /** Each subclass describes itself differently (polymorphism). */
     public abstract String displayDetails();
 }

@@ -15,6 +15,32 @@ public class EventCardPanel extends javax.swing.JPanel {
      */
     public EventCardPanel() {
         initComponents();
+        jTextArea2.setEditable(false);
+        jTextArea2.setLineWrap(true);
+        jTextArea2.setWrapStyleWord(true);
+    }
+
+    /** Fills the card from a real event (name, date and time, venue and type-specific details). */
+    public void setEvent(classModel.Event event) {
+        java.time.format.DateTimeFormatter dateFmt =
+                java.time.format.DateTimeFormatter.ofPattern("EEE, MMM d, yyyy");
+        java.time.format.DateTimeFormatter timeFmt =
+                java.time.format.DateTimeFormatter.ofPattern("h:mm a");
+        jLabel2.setText(event.getEventName() + "  (" + event.getEventType() + ")");
+        jLabel4.setText(event.getDate().format(dateFmt) + "  \u2022  " + event.getStartTime().format(timeFmt));
+        jLabel3.setText(event.getVenue().getVenueName() + " \u2014 " + event.getVenue().getLocation());
+
+        StringBuilder details = new StringBuilder();
+        String people = event.getSpeakerNames();
+        String topic = event.getTopicOrSubject();
+        String materials = event.getMaterials();
+        String topicLabel = "Seminar".equals(event.getEventType()) ? "Subject: " : "Topic: ";
+        if (people != null && !people.isBlank()) details.append("Speaker(s): ").append(people).append('\n');
+        if (topic != null && !topic.isBlank()) details.append(topicLabel).append(topic).append('\n');
+        if (materials != null && !materials.isBlank()) details.append("Materials: ").append(materials).append('\n');
+        details.append("Venue capacity: ").append(event.getVenue().getCapacity());
+        jTextArea2.setText(details.toString());
+        jTextArea2.setCaretPosition(0);
     }
 
     /**

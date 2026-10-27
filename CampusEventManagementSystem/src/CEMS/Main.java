@@ -1,78 +1,69 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Main.java to edit this template
- */
 package CEMS;
 
-/**
- *
- * @author bernard_07
- */
-
-
-import com.system.gui.Dashboard;
+import com.system.gui.LoginFrame;
+import com.system.service.EventManager;
+import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
 
+/** Application entry point and ID generator for every entity type. */
 public class Main {
 
-    // Static counter variables starting at 1000 for each entity type[cite: 7, 8]
-    private static int eventCounter = 0;
-    private static int participantCounter = 0;
-    private static int venueCounter = 0;
-    private static int orgCounter = 0;
-    private static int registrationCounter = 0;
-    private static int attendanceCounter = 0;
+    // Every counter starts at 1. Loading saved records moves the counter past the highest saved ID.
+    private static int eventCounter = 1;
+    private static int participantCounter = 1;
+    private static int venueCounter = 1;
+    private static int orgCounter = 1;
+    private static int registrationCounter = 1;
+    private static int attendanceCounter = 1;
 
-    // Default fallback generator matching Week 2 table[cite: 8]
-    public static synchronized int generateId() {
-        return participantCounter++;
-    }
+    public static synchronized int generateEventId() { return eventCounter++; }
+    public static synchronized int generateParticipantId() { return participantCounter++; }
+    public static synchronized int generateVenueId() { return venueCounter++; }
+    public static synchronized int generateOrgId() { return orgCounter++; }
+    public static synchronized int generateRegistrationId() { return registrationCounter++; }
+    public static synchronized int generateAttendanceId() { return attendanceCounter++; }
 
-    // Entity-specific ID generators[cite: 7, 8]
-    public static synchronized int generateEventId() {
-        return eventCounter++;
-    }
+    // Called by the model constructors so a loaded ID can never be handed out again.
+    public static synchronized void syncEventId(int usedId) { eventCounter = Math.max(eventCounter, usedId + 1); }
+    public static synchronized void syncParticipantId(int usedId) { participantCounter = Math.max(participantCounter, usedId + 1); }
+    public static synchronized void syncVenueId(int usedId) { venueCounter = Math.max(venueCounter, usedId + 1); }
+    public static synchronized void syncOrgId(int usedId) { orgCounter = Math.max(orgCounter, usedId + 1); }
+    public static synchronized void syncRegistrationId(int usedId) { registrationCounter = Math.max(registrationCounter, usedId + 1); }
+    public static synchronized void syncAttendanceId(int usedId) { attendanceCounter = Math.max(attendanceCounter, usedId + 1); }
 
-    public static synchronized int generateParticipantId() {
-        return participantCounter++;
-    }
-
-    public static synchronized int generateVenueId() {
-        return venueCounter++;
-    }
-
-    public static synchronized int generateOrgId() {
-        return orgCounter++;
-    }
-
-    public static synchronized int generateRegistrationId() {
-        return registrationCounter++;
-    }
-
-    public static synchronized int generateAttendanceId() {
-        return attendanceCounter++;
-    }
-
-    // Main entry point to launch the NetBeans Swing Application
     public static void main(String[] args) {
-        try 
-        {
+        try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } 
-        catch (Exception e) 
-        {
-            e.printStackTrace();
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException
+                 | UnsupportedLookAndFeelException e) {
+            e.printStackTrace();   // the default look and feel is still fine
         }
-        
-    SwingUtilities.invokeLater(() -> {
-        // 1. Create the shared service manager
-        com.system.service.EventManager manager = new com.system.service.EventManager();
-        
-        // 2. Launch LoginFrame first
-        com.system.gui.LoginFrame loginFrame = new com.system.gui.LoginFrame(manager);
-        loginFrame.setLocationRelativeTo(null);
-        loginFrame.setVisible(true);
-    });
+
+        SwingUtilities.invokeLater(() -> {
+            // 1. Create the shared service manager. This loads every saved text file.
+            EventManager manager;
+            try {
+                manager = new EventManager();
+            } catch (RuntimeException ex) {
+                JOptionPane.showMessageDialog(null,
+                        "The application could not load its saved data:\n" + ex.getMessage(),
+                        "Startup error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            if (!manager.getLoadWarnings().isEmpty()) {
+                JOptionPane.showMessageDialog(null,
+                        "Some saved records could not be read and were skipped.\n"
+                        + "A backup copy of each affected file was kept in:\n" + manager.getDataDirectory()
+                        + "\n\n" + String.join("\n", manager.getLoadWarnings()),
+                        "Data warning", JOptionPane.WARNING_MESSAGE);
+            }
+
+            // 2. Launch LoginFrame first
+            LoginFrame loginFrame = new LoginFrame(manager);
+            loginFrame.setLocationRelativeTo(null);
+            loginFrame.setVisible(true);
+        });
     }
 }
