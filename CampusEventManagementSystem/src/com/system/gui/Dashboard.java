@@ -5,11 +5,6 @@
 package com.system.gui;
 
 import com.system.service.EventManager;
-import java.awt.*;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import javax.swing.*;
 // @author Dhustine
 
 public class Dashboard extends javax.swing.JFrame {
@@ -17,19 +12,8 @@ public class Dashboard extends javax.swing.JFrame {
     private static final java.util.logging.Logger logger =
             java.util.logging.Logger.getLogger(Dashboard.class.getName());
 
-    private static final Color SIDEBAR_BG = new Color(0, 102, 153);
-    private static final Color HOVER_BG   = new Color(0, 130, 190);
-    private static final Color SUB_BG     = new Color(0, 85, 130);
-
     private EventManager manager;
     private String userRole;
-    private final CardLayout cardLayout = new CardLayout();
-
-    // Kept as fields so role permissions can hide them
-    private JButton btnReports;
-    private JPanel reportsSub;
-    private JButton btnEventsDropdown;
-    private JPanel eventsSub;
 
     // ---------- Constructors ----------
     public Dashboard() {
@@ -44,118 +28,18 @@ public class Dashboard extends javax.swing.JFrame {
         this.manager = manager;
         this.userRole = userRole;
         initComponents();
-        setupUI();
         applyRolePermissions();
         setLocationRelativeTo(null);
     }
 
     // ---------- Role permissions ----------
     private void applyRolePermissions() {
-    if ("Participant".equalsIgnoreCase(userRole)) {
-        btnEventMgmt.setVisible(false);   // participants can't manage events
-        btnReport.setVisible(false);      // or see reports
-    } else if ("Organizer".equalsIgnoreCase(userRole)) {
-        // Organizers get event management
-    } else if ("Administrator".equalsIgnoreCase(userRole)) {
-        // Full access
-    }
-    sidebarPanel.revalidate();
-    sidebarPanel.repaint();
-}
-
-    // ---------- Sidebar + content setup ----------
-    private void setupUI() {
-        // Content area: each panel is a "card"
-        contentPanel.setLayout(cardLayout);
-        contentPanel.add(new DisplayEventsPanel(), "events");
-        contentPanel.add(new RegistrationPanel(), "register");
-        contentPanel.add(new ReportPanel(), "reports");
-
-        // Sidebar
-        sidebarPanel.setLayout(new BoxLayout(sidebarPanel, BoxLayout.Y_AXIS));
-        sidebarPanel.setBackground(SIDEBAR_BG);
-        sidebarPanel.setPreferredSize(new Dimension(220, 600));
-        sidebarPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 0, 0));
-
-        // Plain button
-        sidebarPanel.add(createNavButton("Dashboard", e -> showCard("events")));
-
-        // Dropdown: Events
-        eventsSub = createSubMenu(
-                createSubButton("View Events", e -> showCard("events")),
-                createSubButton("Register", e -> showCard("register"))
-        );
-        btnEventsDropdown = createDropdownButton("Events", eventsSub);
-        sidebarPanel.add(btnEventsDropdown);
-        sidebarPanel.add(eventsSub);
-
-        // Dropdown: Reports
-        reportsSub = createSubMenu(
-                createSubButton("Summary", e -> showCard("reports"))
-        );
-        btnReports = createDropdownButton("Reports", reportsSub);
-        sidebarPanel.add(btnReports);
-        sidebarPanel.add(reportsSub);
-
-        sidebarPanel.add(Box.createVerticalGlue());
-    }
-
-    private void showCard(String name) {
-        cardLayout.show(contentPanel, name);
-    }
-
-    // ---------- Helper methods ----------
-    private JButton styleButton(JButton b, int leftPad, Color bg) {
-        b.setAlignmentX(Component.LEFT_ALIGNMENT);
-        b.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
-        b.setHorizontalAlignment(SwingConstants.LEFT);
-        b.setBorder(BorderFactory.createEmptyBorder(0, leftPad, 0, 10));
-        b.setFocusPainted(false);
-        b.setContentAreaFilled(false);
-        b.setOpaque(true);
-        b.setBackground(bg);
-        b.setForeground(Color.WHITE);
-        b.setFont(b.getFont().deriveFont(Font.BOLD, 13f));
-        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        b.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) { b.setBackground(HOVER_BG); }
-            @Override public void mouseExited(MouseEvent e)  { b.setBackground(bg); }
-        });
-        return b;
-    }
-
-    private JButton createNavButton(String text, ActionListener action) {
-        JButton b = styleButton(new JButton(text), 20, SIDEBAR_BG);
-        b.addActionListener(action);
-        return b;
-    }
-
-    private JButton createSubButton(String text, ActionListener action) {
-        JButton b = styleButton(new JButton(text), 40, SUB_BG);
-        b.addActionListener(action);
-        return b;
-    }
-
-    private JPanel createSubMenu(JButton... buttons) {
-        JPanel p = new JPanel();
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setBackground(SUB_BG);
-        p.setAlignmentX(Component.LEFT_ALIGNMENT);
-        for (JButton b : buttons) p.add(b);
-        p.setVisible(false); // collapsed by default
-        return p;
-    }
-
-    private JButton createDropdownButton(String text, JPanel subMenu) {
-        JButton b = styleButton(new JButton(text + "  ▾"), 20, SIDEBAR_BG);
-        b.addActionListener(e -> {
-            boolean show = !subMenu.isVisible();
-            subMenu.setVisible(show);
-            b.setText(text + (show ? "  ▴" : "  ▾"));
-            sidebarPanel.revalidate();
-            sidebarPanel.repaint();
-        });
-        return b;
+        if ("Participant".equalsIgnoreCase(userRole) || "Participants".equalsIgnoreCase(userRole)) {
+            btnManagement.setVisible(false);   // participants can't manage events
+            btnStats.setVisible(false);        // or see reports
+        }
+        pnlSide.revalidate();
+        pnlSide.repaint();
     }
 
     /**

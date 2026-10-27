@@ -18,17 +18,30 @@ public class LoginFrame extends javax.swing.JFrame {
     /**
      * Creates new form LoginFrame
      */
-    
-    public LoginFrame() {
+        public LoginFrame() {
         this.manager = new EventManager();
         initComponents();
+        styleComponents();
     }
     
     public LoginFrame(EventManager manager) 
     {
-         this.manager = manager;
+        this.manager = manager;
         initComponents();
         getContentPane().setBackground(new java.awt.Color(245, 245, 247));
+        styleComponents();
+    }
+
+    // Makes custom colors show up under the Nimbus look and feel
+    private void styleComponents() {
+        btnLogin.setContentAreaFilled(false);
+        btnLogin.setOpaque(true);
+        btnLogin.setFocusPainted(false);
+        btnLogin.setBackground(new java.awt.Color(51, 51, 51));
+        btnLogin.setForeground(java.awt.Color.WHITE);
+        btnLogin.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
+
+        checkRemember.setOpaque(false);
     }
 
     /**
@@ -44,14 +57,14 @@ public class LoginFrame extends javax.swing.JFrame {
         lblTitle = new javax.swing.JLabel();
         lblSubTitle = new javax.swing.JLabel();
         lblEmail = new javax.swing.JLabel();
-        lblPassword = new javax.swing.JLabel();
         txtEmail = new javax.swing.JTextField();
+        lblPassword = new javax.swing.JLabel();
         txtPassword = new javax.swing.JPasswordField();
-        cmdParticipants = new javax.swing.JComboBox<>();
-        lblRegister = new javax.swing.JLabel();
-        checkRemember = new javax.swing.JCheckBox();
         lblLoginAs = new javax.swing.JLabel();
+        checkRemember = new javax.swing.JCheckBox();
+        cmdParticipants = new javax.swing.JComboBox<>();
         btnLogin = new javax.swing.JButton();
+        lblRegister = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Campus Event Management System - Login");
@@ -78,18 +91,18 @@ public class LoginFrame extends javax.swing.JFrame {
 
         lblPassword.setText("Password");
 
-        cmdParticipants.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Administrator", "Organizer", "Participants", " " }));
-
-        lblRegister.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        lblRegister.setText("<html>Don't have an account? <font color='blue'><u>Register</u></font></html>");
+        lblLoginAs.setText("Login as");
 
         checkRemember.setText("Remember me");
 
-        lblLoginAs.setText("Login as");
+        cmdParticipants.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Administrator", "Organizer", "Participants", " " }));
 
         btnLogin.setBackground(new java.awt.Color(51, 51, 51));
         btnLogin.setForeground(new java.awt.Color(255, 255, 255));
         btnLogin.setText("Login");
+
+        lblRegister.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        lblRegister.setText("<html>Don't have an account? <font color='blue'><u>Register</u></font></html>");
 
         javax.swing.GroupLayout pnlCardLayout = new javax.swing.GroupLayout(pnlCard);
         pnlCard.setLayout(pnlCardLayout);
@@ -125,11 +138,25 @@ public class LoginFrame extends javax.swing.JFrame {
                 .addComponent(lblTitle)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(lblSubTitle)
+                .addGap(9, 9, 9)
+                .addComponent(lblEmail)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(txtEmail, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(lblPassword)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(txtPassword, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(pnlCardLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(checkRemember)
+                    .addComponent(lblLoginAs))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(cmdParticipants, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(btnLogin)
+                .addGap(18, 18, 18)
+                .addComponent(lblRegister, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(24, Short.MAX_VALUE))
         );
 
         getContentPane().add(pnlCard, new java.awt.GridBagConstraints());
@@ -164,8 +191,10 @@ public class LoginFrame extends javax.swing.JFrame {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnLogin;
-                .addGap(9, 9, 9)
-                .addComponent(lblEmail)
+    private javax.swing.JCheckBox checkRemember;
+    private javax.swing.JComboBox<String> cmdParticipants;
+    private javax.swing.JLabel lblEmail;
+    private javax.swing.JLabel lblLoginAs;
     private javax.swing.JLabel lblPassword;
     private javax.swing.JLabel lblRegister;
     private javax.swing.JLabel lblSubTitle;

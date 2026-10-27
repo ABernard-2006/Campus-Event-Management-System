@@ -17,6 +17,17 @@ public class SignInFrame extends javax.swing.JFrame {
      */
     public SignInFrame() {
         initComponents();
+        styleComponents();
+    }
+
+    // Makes the custom button colors show up under the Nimbus look and feel
+    private void styleComponents() {
+        btnSignIn.setContentAreaFilled(false);
+        btnSignIn.setOpaque(true);
+        btnSignIn.setFocusPainted(false);
+        btnSignIn.setBackground(new java.awt.Color(51, 51, 51));
+        btnSignIn.setForeground(java.awt.Color.WHITE);
+        btnSignIn.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
     }
 
     /**
@@ -118,10 +129,11 @@ public class SignInFrame extends javax.swing.JFrame {
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
+            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
 
         pack();
@@ -153,6 +165,9 @@ public class SignInFrame extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btnSignIn;
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JPanel jPanel1;
     private javax.swing.JLabel lblCreatePass;
     private javax.swing.JLabel lblSigInUser;
     private javax.swing.JLabel lblSignInEmail;
