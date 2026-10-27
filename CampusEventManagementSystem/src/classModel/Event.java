@@ -1,14 +1,13 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package classModel;
+
+import CEMS.Main;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+
 /**
- *
- * @author ASUS2
+ * Common blueprint for every campus event. Subclasses (Workshop, Seminar)
+ * describe themselves differently through the abstract methods (polymorphism).
  */
 public abstract class Event {
     protected static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MMM dd, yyyy");
@@ -21,7 +20,9 @@ public abstract class Event {
     private Venue venue;
 
     public Event(int eventId, String eventName, LocalDate date, LocalTime startTime, Venue venue) {
+        if (eventId <= 0) throw new IllegalArgumentException("Event ID must be a positive number.");
         this.eventId = eventId;
+        Main.syncEventId(eventId);          // keeps the ID counter ahead of any loaded ID
         setEventName(eventName);
         setDate(date);
         setStartTime(startTime);
@@ -57,6 +58,21 @@ public abstract class Event {
 
     /** Each subclass describes itself differently (polymorphism). */
     public abstract String displayDetails();
+
+    /** Speaker(s) of the event, comma separated. */
+    public abstract String getSpeakerNames();
+
+    /** Workshop topic or Seminar subject. */
+    public abstract String getTopicOrSubject();
+
+    /** Materials needed. Only workshops have materials, so the default is empty. */
+    public String getMaterials() { return ""; }
+
+    /**
+     * Changes the type-specific details. Validates everything first so a bad
+     * value never leaves the event half-updated. Seminars ignore 'materials'.
+     */
+    public abstract void updateTypeDetails(String speakers, String topicOrSubject, String materials);
 
     /** Common header shared by every event type. */
     protected String baseDetails() {
