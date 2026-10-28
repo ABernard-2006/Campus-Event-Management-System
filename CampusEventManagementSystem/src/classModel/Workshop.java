@@ -11,15 +11,15 @@ public class Workshop extends Event {
     private String speakerName;
 
     /** Creates a NEW workshop with an automatically generated ID. */
-    public Workshop(String eventName, LocalDate date, LocalTime startTime, Venue venue,
+    public Workshop(String eventName, LocalDate date, LocalTime startTime, int durationMinutes, Venue venue,
                     String topic, String materials, String speakerName) {
-        this(Main.generateEventId(), eventName, date, startTime, venue, topic, materials, speakerName);
+        this(Main.generateEventId(), eventName, date, startTime, durationMinutes, venue, topic, materials, speakerName);
     }
 
     /** Rebuilds a workshop that was saved earlier (keeps its saved ID). */
-    public Workshop(int eventId, String eventName, LocalDate date, LocalTime startTime, Venue venue,
-                    String topic, String materials, String speakerName) {
-        super(eventId, eventName, date, startTime, venue);
+    public Workshop(int eventId, String eventName, LocalDate date, LocalTime startTime, int durationMinutes,
+                    Venue venue, String topic, String materials, String speakerName) {
+        super(eventId, eventName, date, startTime, durationMinutes, venue);
         this.topic = require(topic, "Topic");
         this.materials = require(materials, "Materials");
         this.speakerName = require(speakerName, "Speaker");

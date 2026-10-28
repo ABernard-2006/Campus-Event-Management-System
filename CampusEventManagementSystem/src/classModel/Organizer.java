@@ -67,14 +67,14 @@ public class Organizer {
     }
 
     // Helper methods to create specific event instances
-    public Workshop createWorkshop(String eventName, LocalDate date, LocalTime startTime, 
+    public Workshop createWorkshop(String eventName, LocalDate date, LocalTime startTime, int durationMinutes,
                                    Venue venue, String topic, String materials, String speakerName) {
-        return new Workshop(eventName, date, startTime, venue, topic, materials, speakerName);
+        return new Workshop(eventName, date, startTime, durationMinutes, venue, topic, materials, speakerName);
     }
 
-    public Seminar createSeminar(String eventName, LocalDate date, LocalTime startTime, 
+    public Seminar createSeminar(String eventName, LocalDate date, LocalTime startTime, int durationMinutes,
                                  Venue venue, String speakerName, String subject) {
-        return new Seminar(eventName, date, startTime, venue, speakerName, subject);
+        return new Seminar(eventName, date, startTime, durationMinutes, venue, speakerName, subject);
     }
 
     @Override

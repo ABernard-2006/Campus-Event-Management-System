@@ -27,8 +27,10 @@ public class EventCardPanel extends javax.swing.JPanel {
         java.time.format.DateTimeFormatter timeFmt =
                 java.time.format.DateTimeFormatter.ofPattern("h:mm a");
         jLabel2.setText(event.getEventName() + "  (" + event.getEventType() + ")");
-        jLabel4.setText(event.getDate().format(dateFmt) + "  \u2022  " + event.getStartTime().format(timeFmt));
-        jLabel3.setText(event.getVenue().getVenueName() + " \u2014 " + event.getVenue().getLocation());
+        jLabel4.setText(event.getDate().format(dateFmt) + "  -  " + event.getStartTime().format(timeFmt)
+                + " to " + event.getEndTime().format(timeFmt) + (event.endsNextDay() ? " (+1 day)" : "")
+                + "  (" + event.getDurationText() + ")");
+        jLabel3.setText(event.getVenue().getVenueName() + " - " + event.getVenue().getLocation());
 
         StringBuilder details = new StringBuilder();
         String people = event.getSpeakerNames();
