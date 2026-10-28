@@ -69,6 +69,7 @@
                               <Component id="lblEventName" min="-2" max="-2" attributes="0"/>
                               <Component id="lblEventType" min="-2" max="-2" attributes="0"/>
                               <Component id="lblEventDate" min="-2" max="-2" attributes="0"/>
+                              <Component id="lblEventDuration" min="-2" max="-2" attributes="0"/>
                               <Group type="103" alignment="0" groupAlignment="1" max="-2" attributes="0">
                                   <Component id="lblEventVenue" max="32767" attributes="0"/>
                                   <Component id="lblEventMaterials" alignment="1" min="-2" max="-2" attributes="0"/>
@@ -104,6 +105,11 @@
                                   <EmptySpace min="-2" pref="78" max="-2" attributes="0"/>
                               </Group>
                               <Component id="txtEventVenue" min="-2" pref="435" max="-2" attributes="0"/>
+                              <Group type="102" alignment="0" attributes="0">
+                                  <Component id="txtEventDuration" min="-2" pref="80" max="-2" attributes="0"/>
+                                  <EmptySpace max="-2" attributes="0"/>
+                                  <Component id="lblEventDurationUnit" min="-2" max="-2" attributes="0"/>
+                              </Group>
                           </Group>
                       </Group>
                   </Group>
@@ -133,6 +139,12 @@
                   <Component id="SpinEventDate" alignment="3" min="-2" max="-2" attributes="0"/>
                   <Component id="SpinEventType" alignment="3" min="-2" max="-2" attributes="0"/>
                   <Component id="lblEventTime" alignment="3" min="-2" max="-2" attributes="0"/>
+              </Group>
+              <EmptySpace max="-2" attributes="0"/>
+              <Group type="103" groupAlignment="3" attributes="0">
+                  <Component id="lblEventDuration" alignment="3" min="-2" max="-2" attributes="0"/>
+                  <Component id="txtEventDuration" alignment="3" min="-2" max="-2" attributes="0"/>
+                  <Component id="lblEventDurationUnit" alignment="3" min="-2" max="-2" attributes="0"/>
               </Group>
               <EmptySpace max="-2" attributes="0"/>
               <Group type="103" groupAlignment="3" attributes="0">
@@ -314,6 +326,22 @@
       </Properties>
     </Component>
     <Component class="javax.swing.JTextField" name="txtEventMaterials">
+    </Component>
+    <Component class="javax.swing.JLabel" name="lblEventDuration">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="Duration:"/>
+      </Properties>
+    </Component>
+    <Component class="javax.swing.JTextField" name="txtEventDuration">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="60"/>
+        <Property name="toolTipText" type="java.lang.String" value="Length of the event in whole minutes (1 to 1440). Example: 90 = 1 hour 30 minutes."/>
+      </Properties>
+    </Component>
+    <Component class="javax.swing.JLabel" name="lblEventDurationUnit">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="minutes (1 - 1440)"/>
+      </Properties>
     </Component>
   </SubComponents>
 </Form>

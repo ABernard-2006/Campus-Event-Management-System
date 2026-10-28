@@ -10,15 +10,15 @@ public class Seminar extends Event {
     private String subject;
 
     /** Creates a NEW seminar with an automatically generated ID. */
-    public Seminar(String eventName, LocalDate date, LocalTime startTime, Venue venue,
+    public Seminar(String eventName, LocalDate date, LocalTime startTime, int durationMinutes, Venue venue,
                    String speakerName, String subject) {
-        this(Main.generateEventId(), eventName, date, startTime, venue, speakerName, subject);
+        this(Main.generateEventId(), eventName, date, startTime, durationMinutes, venue, speakerName, subject);
     }
 
     /** Rebuilds a seminar that was saved earlier (keeps its saved ID). */
-    public Seminar(int eventId, String eventName, LocalDate date, LocalTime startTime, Venue venue,
-                   String speakerName, String subject) {
-        super(eventId, eventName, date, startTime, venue);
+    public Seminar(int eventId, String eventName, LocalDate date, LocalTime startTime, int durationMinutes,
+                   Venue venue, String speakerName, String subject) {
+        super(eventId, eventName, date, startTime, durationMinutes, venue);
         this.speakerName = require(speakerName, "Speaker name");
         this.subject = require(subject, "Subject");
     }

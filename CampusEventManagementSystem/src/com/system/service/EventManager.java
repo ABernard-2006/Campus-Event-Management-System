@@ -16,6 +16,7 @@ import classModel.Venue;
 import classModel.Workshop;
 
 import java.time.DateTimeException;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -39,6 +40,13 @@ public class EventManager {
     private static final Pattern USERNAME_PATTERN = Pattern.compile("^[A-Za-z0-9._-]{3,30}$");
     private static final int MIN_PASSWORD_LENGTH = 6;
 
+    // Each event stores its own duration (Event.getDurationMinutes()). Older saved events without a
+    // duration get Event.LEGACY_DURATION_MINUTES (120) when they are loaded.
+
+    /** True when events.txt held old-format lines (no duration). A backup is made before the first rewrite. */
+    private boolean legacyEventFileLoaded = false;
+    private boolean legacyEventBackupDone = false;
+
     private final DataStore store;
     private final List<Event> events = new ArrayList<>();
     private final List<Participant> participants = new ArrayList<>();
@@ -49,6 +57,9 @@ public class EventManager {
     private final List<Attendance> attendances = new ArrayList<>();
     private final List<UserAccount> userAccounts = new ArrayList<>();
     private final List<OrganizerKey> organizerKeys = new ArrayList<>();
+
+    /** Screens that want to redraw themselves after any saved change (events, registrations, attendance). */
+    private final List<Runnable> changeListeners = new ArrayList<>();
 
     private final List<String> loadWarnings = new ArrayList<>();
     private final Set<String> problemFiles = new LinkedHashSet<>();
@@ -62,6 +73,51 @@ public class EventManager {
         if (store == null) throw new IllegalArgumentException("A data store is required.");
         this.store = store;
         loadAll();
+    }
+
+    // =====================================================================
+    //  CHANGE NOTIFICATION (so every screen can refresh after a change)
+    // =====================================================================
+    /** Registers something to run after every successful change to events, registrations or attendance. */
+    public void addChangeListener(Runnable listener) {
+        if (listener != null && !changeListeners.contains(listener)) changeListeners.add(listener);
+    }
+
+    public void removeChangeListener(Runnable listener) {
+        changeListeners.remove(listener);
+    }
+
+    private void fireChanged() {
+        for (Runnable l : new ArrayList<>(changeListeners)) {
+            try {
+                l.run();
+            } catch (RuntimeException ex) {
+                ex.printStackTrace();       // one broken screen must not stop the others or hide the saved change
+            }
+        }
+    }
+
+    // =====================================================================
+    //  PERMISSIONS (checked here, not only by hiding buttons)
+    // =====================================================================
+    private boolean isKnownAccount(UserAccount actor) {
+        return actor != null && userAccounts.contains(actor);
+    }
+
+    /** True for a real, saved Administrator or Organizer account. */
+    public boolean isStaff(UserAccount actor) {
+        return isKnownAccount(actor)
+                && (UserAccount.ROLE_ADMIN.equals(actor.getRole()) || UserAccount.ROLE_ORGANIZER.equals(actor.getRole()));
+    }
+
+    private void requireStaff(UserAccount actor, String action) {
+        if (!isStaff(actor))
+            throw new SecurityException("Only an Administrator or Organizer can " + action + ".");
+    }
+
+    /** A Participant may only act on a participant record that carries their own account email. */
+    private boolean isOwnRecord(UserAccount actor, Participant p) {
+        return actor != null && p != null && p.getContactInfo().equalsIgnoreCase(actor.getEmail());
     }
 
     public String getDataDirectory() { return store.getDirectory().toAbsolutePath().toString(); }
@@ -214,7 +270,9 @@ public class EventManager {
     private void loadEvents() {
         for (DataStore.Record r : readFile(DataStore.EVENTS)) {
             try {
-                r.requireFields(9);
+                // New format has 10 fields (the last is durationMinutes); old format has 9 and no duration.
+                if (r.size() != 9 && r.size() != 10)
+                    throw new IllegalArgumentException("expected 9 or 10 fields but found " + r.size());
                 int id = parseInt(r.get(1));
                 if (findEventById(id) != null) {
                     warn(DataStore.EVENTS, r, "duplicate event ID " + id);
@@ -227,13 +285,24 @@ public class EventManager {
                 }
                 LocalDate date = LocalDate.parse(r.get(3).trim());
                 LocalTime time = LocalTime.parse(r.get(4).trim());
+                int duration;
+                if (r.size() == 10) {
+                    try {
+                        duration = Event.validateDuration(parseInt(r.get(9)));
+                    } catch (NumberFormatException ex) {
+                        throw new IllegalArgumentException("duration \"" + r.get(9) + "\" is not a whole number of minutes");
+                    }
+                } else {
+                    duration = Event.LEGACY_DURATION_MINUTES;     // old record: no duration was saved
+                    legacyEventFileLoaded = true;
+                }
                 Event event;
                 switch (r.get(0).trim()) {
                     case "WORKSHOP":   // fields: topic | materials | speaker
-                        event = new Workshop(id, r.get(2), date, time, venue, r.get(6), r.get(7), r.get(8));
+                        event = new Workshop(id, r.get(2), date, time, duration, venue, r.get(6), r.get(7), r.get(8));
                         break;
                     case "SEMINAR":    // fields: speaker | subject | (unused)
-                        event = new Seminar(id, r.get(2), date, time, venue, r.get(6), r.get(7));
+                        event = new Seminar(id, r.get(2), date, time, duration, venue, r.get(6), r.get(7));
                         break;
                     default:
                         throw new IllegalArgumentException("unknown event type \"" + r.get(0) + "\"");
@@ -360,6 +429,11 @@ public class EventManager {
     }
 
     private void saveEvents() {
+        // Old-format lines are upgraded when the file is rewritten; keep a copy of the original once first.
+        if (legacyEventFileLoaded && !legacyEventBackupDone) {
+            store.backupFile(DataStore.EVENTS);
+            legacyEventBackupDone = true;
+        }
         List<String> lines = new ArrayList<>();
         for (Event e : events) {
             String type, f1, f2, f3;
@@ -373,10 +447,10 @@ public class EventManager {
                 throw new StorageException("Cannot save unsupported event type " + e.getClass().getSimpleName());
             }
             lines.add(DataStore.join(type, e.getEventId(), e.getEventName(), e.getDate(), e.getStartTime(),
-                    e.getVenue().getVenueId(), f1, f2, f3));
+                    e.getVenue().getVenueId(), f1, f2, f3, e.getDurationMinutes()));
         }
         store.writeRecords(DataStore.EVENTS,
-                "type|eventId|name|date|startTime|venueId|WORKSHOP: topic,materials,speaker / SEMINAR: speaker,subject,(blank)", lines);
+                "type|eventId|name|date|startTime|venueId|WORKSHOP: topic,materials,speaker / SEMINAR: speaker,subject,(blank)|durationMinutes", lines);
     }
 
     private void saveParticipants() {
@@ -703,22 +777,40 @@ public class EventManager {
         return null;
     }
 
-    private void checkConflict(Event ignore, Venue venue, LocalDate date, LocalTime time) {
+    /**
+     * Rejects an event whose time slot overlaps another event at the SAME venue. Events at different
+     * venues never conflict. Each event occupies [start, start + its own durationMinutes): two events
+     * conflict when startA < endB && startB < endA, so an event that begins exactly when another ends
+     * does NOT conflict. Works across midnight because full date-times are compared.
+     *
+     * @param ignore the event being edited (so it never conflicts with itself), or null when creating
+     */
+    private void checkConflict(Event ignore, Venue venue, LocalDate date, LocalTime time, int durationMinutes) {
+        java.time.LocalDateTime newStart = date.atTime(time);
+        java.time.LocalDateTime newEnd = newStart.plusMinutes(durationMinutes);
         for (Event e : events) {
             if (e == ignore) continue;
-            if (e.getVenue().getVenueId() == venue.getVenueId()
-                    && e.getDate().equals(date) && e.getStartTime().equals(time)) {
-                throw new IllegalStateException("Schedule conflict: \"" + e.getEventName()
-                        + "\" already uses " + e.getVenue().getVenueName() + " at that date and time.");
+            if (e.getVenue().getVenueId() != venue.getVenueId()) continue;
+            java.time.LocalDateTime start = e.getStartDateTime();
+            java.time.LocalDateTime end = e.getEndDateTime();
+            if (newStart.isBefore(end) && start.isBefore(newEnd)) {
+                throw new IllegalStateException("Schedule conflict: \"" + e.getEventName() + "\" already uses "
+                        + e.getVenue().getVenueName() + " on " + e.getDate() + " from " + e.getTimeRangeText()
+                        + ". Your event would run " + time.format(java.time.format.DateTimeFormatter.ofPattern("hh:mm a"))
+                        + " to " + newEnd.toLocalTime().format(java.time.format.DateTimeFormatter.ofPattern("hh:mm a"))
+                        + " (" + Event.formatDuration(durationMinutes) + "), so pick another time, duration or venue.");
             }
         }
     }
 
-    public void addEvent(Event event) {
+    /** Creates an event. Only an Administrator or Organizer may do this. */
+    public void addEvent(UserAccount actor, Event event) {
+        requireStaff(actor, "create events");
         if (event == null) throw new IllegalArgumentException("Event is required.");
         if (events.contains(event)) throw new IllegalStateException("This event has already been added.");
         Venue venue = resolveVenue(event.getVenue());
-        checkConflict(null, venue, event.getDate(), event.getStartTime());
+        Event.validateDuration(event.getDurationMinutes());
+        checkConflict(null, venue, event.getDate(), event.getStartTime(), event.getDurationMinutes());
 
         boolean newVenue = !venues.contains(venue);
         event.setVenue(venue);
@@ -732,19 +824,23 @@ public class EventManager {
             if (newVenue) venues.remove(venue);
             throw ex;
         }
+        fireChanged();
     }
 
     /**
      * Changes an existing event. The event type (Workshop/Seminar) cannot change.
      * 'materials' is ignored for seminars.
      */
-    public void updateEvent(Event event, String name, LocalDate date, LocalTime time, Venue venue,
+    public void updateEvent(UserAccount actor, Event event, String name, LocalDate date, LocalTime time,
+                            int durationMinutes, Venue venue,
                             String speakers, String topicOrSubject, String materials) {
+        requireStaff(actor, "edit events");
         if (event == null || !events.contains(event)) throw new IllegalArgumentException("Select an event to update.");
         if (date == null) throw new IllegalArgumentException("Event date is required.");
         if (time == null) throw new IllegalArgumentException("Start time is required.");
+        Event.validateDuration(durationMinutes);           // reject a bad duration before anything changes
         Venue newVenue = resolveVenue(venue);
-        checkConflict(event, newVenue, date, time);
+        checkConflict(event, newVenue, date, time, durationMinutes);
         if (countActive(event) > newVenue.getCapacity())
             throw new IllegalStateException("That venue holds only " + newVenue.getCapacity()
                     + " people but " + countActive(event) + " are already registered.");
@@ -752,6 +848,7 @@ public class EventManager {
         String oldName = event.getEventName();
         LocalDate oldDate = event.getDate();
         LocalTime oldTime = event.getStartTime();
+        int oldDuration = event.getDurationMinutes();
         Venue oldVenue = event.getVenue();
         String oldSpeakers = event.getSpeakerNames();
         String oldTopic = event.getTopicOrSubject();
@@ -761,6 +858,7 @@ public class EventManager {
             event.setEventName(name);
             event.setDate(date);
             event.setStartTime(time);
+            event.setDurationMinutes(durationMinutes);
             event.setVenue(newVenue);
             event.updateTypeDetails(speakers, topicOrSubject, materials);
             if (venueIsNew) {
@@ -772,15 +870,18 @@ public class EventManager {
             event.setEventName(oldName);
             event.setDate(oldDate);
             event.setStartTime(oldTime);
+            event.setDurationMinutes(oldDuration);
             event.setVenue(oldVenue);
             event.updateTypeDetails(oldSpeakers, oldTopic, oldMaterials);
             if (venueIsNew) venues.remove(newVenue);
             throw ex;
         }
+        fireChanged();
     }
 
     /** Deletes an event together with its registrations and attendance records. */
-    public void deleteEvent(Event event) {
+    public void deleteEvent(UserAccount actor, Event event) {
+        requireStaff(actor, "delete events");
         if (event == null || !events.contains(event)) throw new IllegalArgumentException("Select an event to delete.");
         List<Event> oldEvents = new ArrayList<>(events);
         List<Registration> oldRegistrations = new ArrayList<>(registrations);
@@ -802,6 +903,7 @@ public class EventManager {
             attendances.addAll(oldAttendances);
             throw ex;
         }
+        fireChanged();
     }
 
     /** Matches keyword against event name, type, venue, speaker and topic (case-insensitive). */
@@ -953,10 +1055,37 @@ public class EventManager {
         return null;
     }
 
-    /** Registers a participant for an event. A new participant is saved automatically. */
-    public Registration register(Participant p, Event e) {
+    /** Finds the saved participant whose contact (email) matches, or null. Used to link an account to its profile. */
+    public Participant findParticipantByContact(String email) {
+        if (email == null) return null;
+        for (Participant p : participants)
+            if (p.getContactInfo().equalsIgnoreCase(email.trim())) return p;
+        return null;
+    }
+
+    /**
+     * Registers a participant for an event. A new participant is saved automatically.
+     *
+     * Permissions: Administrators and Organizers may register anyone (for example a walk-in guest).
+     * A Participant account may only register the participant record that carries its own email.
+     *
+     * @throws SecurityException     when the actor is not allowed to register this participant
+     * @throws IllegalStateException when the event is over, full, or the participant is already registered
+     */
+    public Registration register(UserAccount actor, Participant p, Event e) {
+        if (!isKnownAccount(actor)) throw new SecurityException("Log in to register for an event.");
         if (p == null || e == null) throw new IllegalArgumentException("Select both a participant and an event.");
+        boolean staff = isStaff(actor);
+        if (!staff) {
+            if (!isOwnRecord(actor, p))
+                throw new SecurityException("You can only register yourself. Use the email address of your own account.");
+            Participant mine = findParticipantByContact(actor.getEmail());
+            if (mine != null && mine != p)
+                throw new IllegalStateException("Your participant profile already exists. Register using that profile.");
+        }
         if (!events.contains(e)) throw new IllegalArgumentException("That event no longer exists.");
+        if (e.getDate().isBefore(LocalDate.now()))
+            throw new IllegalStateException("Registration is closed: \"" + e.getEventName() + "\" has already taken place.");
         for (Registration r : registrations) {
             if (r.isActive() && r.getParticipant() == p && r.getEvent() == e) {
                 throw new IllegalStateException(p.getFullName() + " is already registered for this event.");
@@ -966,7 +1095,13 @@ public class EventManager {
             throw new IllegalStateException("Venue is full (capacity " + e.getVenue().getCapacity() + ").");
         }
         boolean newParticipant = !participants.contains(p);
-        if (newParticipant) checkParticipantNotDuplicate(p);
+        if (newParticipant) {
+            checkParticipantNotDuplicate(p);
+            Participant sameEmail = findParticipantByContact(p.getContactInfo());
+            if (sameEmail != null)
+                throw new IllegalStateException("The email " + p.getContactInfo() + " already belongs to "
+                        + sameEmail.getFullName() + ". Each participant needs a different email.");
+        }
 
         Registration r = new Registration(p, e, LocalDate.now(), Registration.REGISTERED);
         if (newParticipant) participants.add(p);
@@ -979,11 +1114,19 @@ public class EventManager {
             if (newParticipant) participants.remove(p);
             throw ex;
         }
+        fireChanged();
         return r;
     }
 
-    public void cancelRegistration(Registration r) {
+    /**
+     * Cancels a registration (the record is kept with the status "Cancelled", so history stays complete).
+     * Staff may cancel any registration; a Participant only their own.
+     */
+    public void cancelRegistration(UserAccount actor, Registration r) {
+        if (!isKnownAccount(actor)) throw new SecurityException("Log in to cancel a registration.");
         if (r == null || !registrations.contains(r)) throw new IllegalArgumentException("Select a registration first.");
+        if (!isStaff(actor) && !isOwnRecord(actor, r.getParticipant()))
+            throw new SecurityException("You can only cancel your own registrations.");
         if (!r.isActive()) throw new IllegalStateException("This registration is already cancelled.");
         Attendance a = getAttendance(r);
         boolean wasAttended = a != null && a.isAttended();
@@ -997,6 +1140,27 @@ public class EventManager {
             if (a != null && wasAttended) a.markPresent();
             throw ex;
         }
+        fireChanged();
+    }
+
+    /** Registrations for one event, including cancelled ones. Staff only. */
+    public List<Registration> getRegistrationsFor(UserAccount actor, Event e) {
+        requireStaff(actor, "view the registrations of an event");
+        return getRegistrationsFor(e);
+    }
+
+    /**
+     * The registrations this account is allowed to see: everything for staff,
+     * only their own for a Participant. Newest registration first.
+     */
+    public List<Registration> getVisibleRegistrations(UserAccount actor) {
+        List<Registration> out = new ArrayList<>();
+        if (!isKnownAccount(actor)) return out;
+        boolean staff = isStaff(actor);
+        for (Registration r : registrations)
+            if (staff || isOwnRecord(actor, r.getParticipant())) out.add(r);
+        Collections.reverse(out);
+        return out;
     }
 
     public List<Registration> getRegistrationsFor(Event e) {
@@ -1047,12 +1211,22 @@ public class EventManager {
         return Collections.unmodifiableList(attendances);
     }
 
-    public void markAttendance(Registration r, boolean present) {
+    /**
+     * Marks a registered participant present or absent. Staff only.
+     * A registration can only ever have ONE attendance record: marking again changes that record,
+     * and asking for the status it already has is rejected instead of silently repeated.
+     */
+    public void markAttendance(UserAccount actor, Registration r, boolean present) {
+        requireStaff(actor, "mark attendance");
         if (r == null || !registrations.contains(r)) throw new IllegalArgumentException("Select a registration first.");
         if (!r.isActive()) throw new IllegalStateException("Cancelled registrations cannot be marked.");
         Attendance a = getAttendance(r);
         boolean created = (a == null);
         boolean wasAttended = !created && a.isAttended();
+        if (!created && present && wasAttended)
+            throw new IllegalStateException(r.getParticipant().getFullName() + " is already marked present.");
+        if (!created && !present && !wasAttended)
+            throw new IllegalStateException(r.getParticipant().getFullName() + " is already marked absent.");
         if (created) {
             a = new Attendance(r);
             attendances.add(a);
@@ -1070,27 +1244,93 @@ public class EventManager {
             }
             throw ex;
         }
+        fireChanged();
     }
 
+    /** Participants of this event who were marked present AND still hold a valid (not cancelled) registration. */
     public int countAttended(Event e) {
         int n = 0;
         for (Attendance a : attendances) {
-            if (a.getRegistration().getEvent() == e && a.isAttended()) n++;
+            if (a.getRegistration().getEvent() == e && a.isAttended() && a.getRegistration().isActive()) n++;
         }
         return n;
     }
 
     // =====================================================================
-    //  POLYMORPHISM REPORT DEMONSTRATION
+    //  REPORTS (staff only)
     // =====================================================================
-    /** Runtime polymorphism: each Event runs its own displayDetails(). */
+    /**
+     * One report row per event. Counting rules:
+     *  - Total Registration = registrations that are still valid (cancelled ones are not counted)
+     *  - Attended           = valid registrations whose attendance is recorded as present
+     *  - Student / Faculty / Others = valid registrations split by participant category,
+     *                         so Student + Faculty + Others always equals Total Registration
+     *
+     * @param eventType  "Workshop", "Seminar", or null / "All" for every type
+     * @param onlyEvent  a single event, or null for all events
+     * @param from       first event date to include, or null for no lower limit
+     * @param to         last event date to include, or null for no upper limit
+     */
+    public List<EventReportRow> buildReport(UserAccount actor, String eventType, Event onlyEvent,
+                                            LocalDate from, LocalDate to) {
+        requireStaff(actor, "view reports");
+        if (from != null && to != null && from.isAfter(to))
+            throw new IllegalArgumentException("The report start date must not be after the end date.");
+        String type = eventType == null ? "" : eventType.trim();
+        boolean anyType = type.isEmpty() || type.equalsIgnoreCase("All") || type.toLowerCase().startsWith("all ");
+        List<Event> picked = new ArrayList<>();
+        for (Event e : events) {
+            if (onlyEvent != null && e != onlyEvent) continue;
+            if (!anyType && !e.getEventType().equalsIgnoreCase(type)) continue;
+            if (from != null && e.getDate().isBefore(from)) continue;
+            if (to != null && e.getDate().isAfter(to)) continue;
+            picked.add(e);
+        }
+        picked.sort(Comparator.comparing(Event::getDate).thenComparing(Event::getStartTime));
+
+        List<EventReportRow> rows = new ArrayList<>();
+        for (Event e : picked) {
+            int students = 0, faculty = 0, others = 0, total = 0;
+            for (Registration r : registrations) {
+                if (r.getEvent() != e || !r.isActive()) continue;
+                total++;
+                Participant p = r.getParticipant();
+                if (p instanceof Student) students++;
+                else if (p instanceof Faculty) faculty++;
+                else others++;                      // Others (and any future category)
+            }
+            rows.add(new EventReportRow(e, total, countAttended(e), students, faculty, others));
+        }
+        return rows;
+    }
+
+    /** Attendance rate in percent. Returns 0 when nobody is registered (no division by zero). */
+    public static double attendanceRate(int attended, int registered) {
+        return registered <= 0 ? 0.0 : (attended * 100.0) / registered;
+    }
+
+    // =====================================================================
+    //  POLYMORPHISM REPORT
+    // =====================================================================
+    /** Runtime polymorphism: the Event runs ITS OWN displayDetails() (Workshop and Seminar differ). */
+    private String describe(Event e) {
+        return e.displayDetails() + "\n"
+                + "Registered: " + countActive(e) + " / " + e.getVenue().getCapacity() + "\n"
+                + "Attended  : " + countAttended(e) + "\n";
+    }
+
+    /** The same text block used by the full report, for one event. Staff only (it contains counts). */
+    public String describeEvent(UserAccount actor, Event e) {
+        requireStaff(actor, "view event reports");
+        if (e == null || !events.contains(e)) throw new IllegalArgumentException("That event no longer exists.");
+        return describe(e);
+    }
+
     public String generatePolymorphicEventReport() {
         StringBuilder sb = new StringBuilder();
         sb.append("=== CAMPUS EVENT POLYMORPHIC REPORT ===\n\n");
         for (Event e : events) {
-            sb.append(e.displayDetails()).append("\n");
-            sb.append("Registered: ").append(countActive(e)).append(" / ").append(e.getVenue().getCapacity()).append("\n");
-            sb.append("Attended  : ").append(countAttended(e)).append("\n");
+            sb.append(describe(e));
             sb.append("---------------------------------------\n");
         }
         return sb.toString();

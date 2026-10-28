@@ -21,6 +21,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -58,6 +59,12 @@ public class Dashboard extends javax.swing.JFrame {
     private final ProfileHeaderPanel profileHeader = new ProfileHeaderPanel();
     private JButton btnOrganizerKeys;       // only created for administrators
 
+    // What the Home/Events card list is currently showing, so it can be redrawn after any data change
+    private Supplier<List<Event>> homeSource = null;
+    private String homeEmptyMessage = "";
+    // Runs after every saved change (event, registration, attendance) and refreshes every screen
+    private final Runnable dataListener = this::onDataChanged;
+
     // ---------- Constructor ----------
     /**
      * @param manager the shared EventManager (the same one the login screen used)
@@ -74,6 +81,7 @@ public class Dashboard extends javax.swing.JFrame {
         buildProfileHeader();
         buildHomeWidgets();
         refreshHome();
+        manager.addChangeListener(dataListener);
         showCard(CARD_HOME);
         pack();                 // the profile header added extra height, so size the window again
         setLocationRelativeTo(null);
@@ -155,19 +163,40 @@ public class Dashboard extends javax.swing.JFrame {
         }
         switch (name) {
             case CARD_MANAGE:
-                if (!cards.containsKey(name)) addCard(name, new EventPanel(manager));
+                if (!cards.containsKey(name)) addCard(name, new ManageEventsPanel(manager, account));
                 break;
             case CARD_REGISTER:
                 // A fresh panel each time, so its event list always matches the saved events.
-                addCard(name, new RegistrationPanel(manager));
+                addCard(name, new RegistrationPanel(manager, account));
                 break;
             case CARD_REPORTS:
-                if (!cards.containsKey(name)) addCard(name, new ReportPanel());
+                if (!cards.containsKey(name)) addCard(name, new ReportPanel(manager, account));
                 break;
             default:
                 break;
         }
+        refreshCard(name);
         cardLayout.show(contentCards, name);
+    }
+
+    /** Asks the panel inside a card (if it supports it) to re-read the shared data. */
+    private void refreshCard(String name) {
+        JComponent holder = cards.get(name);
+        if (holder instanceof JScrollPane) {
+            java.awt.Component view = ((JScrollPane) holder).getViewport().getView();
+            if (view instanceof Refreshable) ((Refreshable) view).refresh();
+        }
+    }
+
+    /**
+     * Called by EventManager after any saved change. Redraws everything that shows event data:
+     * the calendar, upcoming list, event cards, and every management/registration/report screen.
+     */
+    private void onDataChanged() {
+        if (account == null) return;            // already logged out
+        refreshHome();
+        rebuildHomeCards();
+        for (String name : new ArrayList<>(cards.keySet())) refreshCard(name);
     }
 
     private void addCard(String name, JComponent panel) {
@@ -212,7 +241,7 @@ public class Dashboard extends javax.swing.JFrame {
     private void showAllEvents(boolean asEventsView) {
         txtSearch.setText("");
         refreshHome();
-        showEventCards(manager.getAllEvents(), asEventsView ? "All Events" : "Dashboard",
+        showEventCards(() -> manager.getAllEvents(), asEventsView ? "All Events" : "Dashboard",
                 "No events have been created yet.");
         cardLayout.show(contentCards, CARD_HOME);
     }
@@ -223,22 +252,33 @@ public class Dashboard extends javax.swing.JFrame {
             showAllEvents(false);
             return;
         }
-        showEventCards(manager.searchEvent(keyword), "Search: " + keyword,
+        showEventCards(() -> manager.searchEvent(keyword), "Search: " + keyword,
                 "No events match \"" + keyword + "\".");
     }
 
     private void showEventsOn(LocalDate date) {
         txtSearch.setText("");
-        showEventCards(manager.getEventsOn(date), "Events on " + date.format(TITLE_DATE),
+        showEventCards(() -> manager.getEventsOn(date), "Events on " + date.format(TITLE_DATE),
                 "No events on " + date.format(TITLE_DATE) + ".");
     }
 
     /** Rebuilds the scrolling list of event cards. Upcoming events come first, then past ones. */
-    private void showEventCards(List<Event> events, String title, String emptyMessage) {
+    private void showEventCards(Supplier<List<Event>> source, String title, String emptyMessage) {
+        homeSource = source;
+        homeEmptyMessage = emptyMessage;
         jLabel1.setText(title);
+        rebuildHomeCards();
+        jScrollPane1.getVerticalScrollBar().setValue(0);
+    }
+
+    /** Redraws the card list from the current source (keeps the title and the scroll position). */
+    private void rebuildHomeCards() {
+        if (homeSource == null) return;
+        List<Event> events = homeSource.get();
+        int scroll = jScrollPane1.getVerticalScrollBar().getValue();
         eventsContainer.removeAll();
         if (events.isEmpty()) {
-            JLabel none = new JLabel(emptyMessage);
+            JLabel none = new JLabel(homeEmptyMessage);
             none.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 20, 20, 20));
             none.setAlignmentX(Component.LEFT_ALIGNMENT);
             eventsContainer.add(none);
@@ -252,7 +292,8 @@ public class Dashboard extends javax.swing.JFrame {
         }
         eventsContainer.revalidate();
         eventsContainer.repaint();
-        jScrollPane1.getVerticalScrollBar().setValue(0);
+        final int keep = scroll;
+        javax.swing.SwingUtilities.invokeLater(() -> jScrollPane1.getVerticalScrollBar().setValue(keep));
     }
 
     private static List<Event> sortForDisplay(List<Event> events) {
@@ -280,6 +321,7 @@ public class Dashboard extends javax.swing.JFrame {
                 JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         if (choice != JOptionPane.YES_OPTION) return;
         account = null;                         // forget who was logged in
+        manager.removeChangeListener(dataListener);
         LoginFrame login = new LoginFrame(manager);
         login.setLocationRelativeTo(null);
         login.setVisible(true);
