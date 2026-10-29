@@ -15,9 +15,7 @@ import com.system.service.EventManager;
 import com.system.service.StorageException;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
-import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import javax.swing.JButton;
 import javax.swing.JOptionPane;
@@ -72,11 +70,7 @@ public class RegistrationPanel extends javax.swing.JPanel implements Refreshable
         addCancelBar();
 
         cmbParticipantType.addActionListener(e -> updateTypeFields());
-        btnRegister.addActionListener(e -> registerParticipant());
-        btnRegClear.addActionListener(e -> clearForm());
-        btnSearchReg.addActionListener(e -> loadTable(txtSearchReg.getText()));
-        txtSearchReg.addActionListener(e -> loadTable(txtSearchReg.getText()));
-        btnCancelReg.addActionListener(e -> cancelSelected());
+        btnCancelReg.addActionListener(this::btnCancelRegActionPerformed);   // hand-added button (not in the .form)
 
         updateTypeFields();
         refresh();
@@ -116,10 +110,7 @@ public class RegistrationPanel extends javax.swing.JPanel implements Refreshable
         eventChoices.clear();
         cmbSelectEvent.removeAllItems();
         if (manager == null) return;
-        List<Event> open = new ArrayList<>();
-        LocalDate today = LocalDate.now();
-        for (Event e : manager.getAllEvents()) if (!e.getDate().isBefore(today)) open.add(e);
-        open.sort(Comparator.comparing(Event::getDate).thenComparing(Event::getStartTime));
+        List<Event> open = manager.getUpcomingEvents(0);      // events today or later, soonest first
         int select = open.isEmpty() ? -1 : 0;
         for (Event e : open) {
             if (e.getEventId() == keepId) select = eventChoices.size();
@@ -137,9 +128,9 @@ public class RegistrationPanel extends javax.swing.JPanel implements Refreshable
     /** Dynamic switching of the labels/fields for Student, Faculty and Others. */
     private void updateTypeFields() {
         String t = selectedType();
-        boolean student = t.equals("Student");
-        boolean faculty = t.equals("Faculty");
-        boolean others = t.equals("Others");
+        boolean student = t.equals(EventManager.PARTICIPANT_STUDENT);
+        boolean faculty = t.equals(EventManager.PARTICIPANT_FACULTY);
+        boolean others = t.equals(EventManager.PARTICIPANT_OTHERS);
 
         lblRegNum.setText(student ? "Student Number:" : "Faculty ID:");
         lblRegNum.setVisible(!others);
@@ -191,70 +182,6 @@ public class RegistrationPanel extends javax.swing.JPanel implements Refreshable
         updateTypeFields();
     }
 
-    // ---------- Register ----------
-    private void registerParticipant() {
-        try {
-            if (manager == null) throw new IllegalStateException("No EventManager connected to this panel.");
-
-            int idx = cmbSelectEvent.getSelectedIndex();
-            if (idx < 0 || idx >= eventChoices.size())
-                throw new IllegalArgumentException("No event selected. There may be no upcoming events yet.");
-            Event event = eventChoices.get(idx);
-
-            String type = selectedType();
-            String name = txtRegName.getText().trim();
-            String contact = staff ? txtRegContact.getText().trim() : actor.getEmail();
-            String number = txtRegNum.getText().trim();
-            String extra = txtRegExtra.getText().trim();
-            String extra2 = txtRegExtra2.getText().trim();
-
-            if (type.isEmpty() || !(type.equals("Student") || type.equals("Faculty") || type.equals("Others")))
-                throw new IllegalArgumentException("Choose a participant type.");
-            if (name.isEmpty()) throw new IllegalArgumentException("Participant name is required.");
-            if (contact.isEmpty()) throw new IllegalArgumentException("BU/email address is required.");
-            if (contact.matches(".*\\s+.*"))
-                throw new IllegalArgumentException("BU/email address must not contain spaces.");
-            if (type.equals("Student")) {
-                if (number.isEmpty()) throw new IllegalArgumentException("Student number is required.");
-                if (extra.isEmpty()) throw new IllegalArgumentException("Program is required.");
-            } else if (type.equals("Faculty")) {
-                if (number.isEmpty()) throw new IllegalArgumentException("Faculty ID is required.");
-                if (extra.isEmpty()) throw new IllegalArgumentException("Department is required.");
-                if (extra2.isEmpty()) throw new IllegalArgumentException("Position is required.");
-            } else if (extra.isEmpty()) {
-                throw new IllegalArgumentException("Affiliation / company is required.");
-            }
-
-            // A Participant account always uses its own profile; staff can pick or create anyone.
-            Participant p = staff ? manager.findParticipant(type, number, name)
-                                  : manager.findParticipantByContact(actor.getEmail());
-            if (p == null) {
-                switch (type) {
-                    case "Student": p = new Student(name, contact, number, extra); break;
-                    case "Faculty": p = new Faculty(name, contact, number, extra, extra2); break;
-                    default:        p = new Others(name, contact, extra); break;
-                }
-            }
-
-            // Permission, duplicate, capacity and "event already over" rules are enforced here.
-            // A new participant is saved by the same call, together with the registration.
-            Registration r = manager.register(actor, p, event);
-
-            JOptionPane.showMessageDialog(this, p.getFullName() + " is registered for "
-                    + event.getEventName() + ".\nRegistration ID: " + r.getRegistrationId());
-            if (staff) clearForm();
-            refresh();
-        } catch (SecurityException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Not allowed", JOptionPane.WARNING_MESSAGE);
-        } catch (StorageException ex) {
-            JOptionPane.showMessageDialog(this, "The registration could not be saved:\n" + ex.getMessage(),
-                    "Cannot complete action", JOptionPane.ERROR_MESSAGE);
-        } catch (IllegalArgumentException | IllegalStateException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Invalid or Missing Input",
-                    JOptionPane.WARNING_MESSAGE);
-        }
-    }
-
     private void clearForm() {
         if (hasLockedProfile()) return;           // a Participant's own profile stays filled in
         txtRegName.setText("");
@@ -270,48 +197,10 @@ public class RegistrationPanel extends javax.swing.JPanel implements Refreshable
         tableModel.setRowCount(0);
         shown.clear();
         if (manager == null) return;
-        String k = keyword == null ? "" : keyword.trim().toLowerCase();
-        for (Registration r : manager.getVisibleRegistrations(actor)) {
-            String name = r.getParticipant().getFullName();
-            String type = r.getParticipant().getClass().getSimpleName();
-            String eventName = r.getEvent().getEventName();
-            String status = r.getStatus();
-            if (k.isEmpty() || name.toLowerCase().contains(k) || eventName.toLowerCase().contains(k)
-                    || type.toLowerCase().contains(k) || status.toLowerCase().contains(k)) {
-                shown.add(r);
-                tableModel.addRow(new Object[]{r.getRegistrationId(), name, eventName, type, status});
-            }
-        }
-    }
-
-    private void cancelSelected() {
-        try {
-            int row = regTable.getSelectedRow();
-            if (row < 0 || row >= shown.size()) {
-                JOptionPane.showMessageDialog(this, "Select a registration in the history table first.",
-                        "No registration selected", JOptionPane.INFORMATION_MESSAGE);
-                return;
-            }
-            Registration r = shown.get(row);
-            if (!r.isActive()) {
-                JOptionPane.showMessageDialog(this, "That registration is already cancelled.",
-                        "Cancel registration", JOptionPane.INFORMATION_MESSAGE);
-                return;
-            }
-            int choice = JOptionPane.showConfirmDialog(this,
-                    "Cancel " + r.getParticipant().getFullName() + "'s registration for \""
-                    + r.getEvent().getEventName() + "\"?",
-                    "Cancel registration", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-            if (choice != JOptionPane.YES_OPTION) return;
-            manager.cancelRegistration(actor, r);
-            refresh();
-        } catch (SecurityException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Not allowed", JOptionPane.WARNING_MESSAGE);
-        } catch (StorageException ex) {
-            JOptionPane.showMessageDialog(this, "The change could not be saved:\n" + ex.getMessage(),
-                    "Cannot complete action", JOptionPane.ERROR_MESSAGE);
-        } catch (IllegalArgumentException | IllegalStateException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Cannot complete action", JOptionPane.WARNING_MESSAGE);
+        for (Registration r : manager.searchVisibleRegistrations(actor, keyword)) {
+            shown.add(r);
+            tableModel.addRow(new Object[]{r.getRegistrationId(), r.getParticipant().getFullName(),
+                r.getEvent().getEventName(), r.getParticipant().getClass().getSimpleName(), r.getStatus()});
         }
     }
 
@@ -372,8 +261,10 @@ public class RegistrationPanel extends javax.swing.JPanel implements Refreshable
         cmbParticipantType.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Student", "Faculty", "Others" }));
 
         btnRegister.setText("Register");
+        btnRegister.addActionListener(this::btnRegisterActionPerformed);
 
         btnRegClear.setText("Clear");
+        btnRegClear.addActionListener(this::btnRegClearActionPerformed);
 
         regTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
@@ -391,7 +282,10 @@ public class RegistrationPanel extends javax.swing.JPanel implements Refreshable
         lblRegHistory.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         lblRegHistory.setText("Registration History");
 
+        txtSearchReg.addActionListener(this::txtSearchRegActionPerformed);
+
         btnSearchReg.setText("Search");
+        btnSearchReg.addActionListener(this::btnSearchRegActionPerformed);
 
         lblSearchReg.setText("Search Registration:");
 
@@ -502,6 +396,113 @@ public class RegistrationPanel extends javax.swing.JPanel implements Refreshable
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 204, javax.swing.GroupLayout.PREFERRED_SIZE))
         );
     }// </editor-fold>//GEN-END:initComponents
+
+    /**
+     * Register. Flow: read the form -> immediate checks (nothing chosen / fields empty, focus on the field)
+     * -> EventManager.registerForEvent (who is registered, field rules, permission, duplicate, capacity
+     * and "event already over" rules, saving) -> show the result and refresh.
+     */
+    private void btnRegisterActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRegisterActionPerformed
+        if (manager == null) { warn("No EventManager connected to this panel.", "Invalid or Missing Input"); return; }
+
+        int idx = cmbSelectEvent.getSelectedIndex();
+        if (idx < 0 || idx >= eventChoices.size()) {
+            warn("No event selected. There may be no upcoming events yet.", "Invalid or Missing Input");
+            cmbSelectEvent.requestFocusInWindow();
+            return;
+        }
+        Event event = eventChoices.get(idx);
+
+        String type = selectedType();
+        String name = txtRegName.getText().trim();
+        String contact = staff ? txtRegContact.getText().trim() : actor.getEmail();
+        String number = txtRegNum.getText().trim();
+        String extra = txtRegExtra.getText().trim();
+        String extra2 = txtRegExtra2.getText().trim();
+
+        // ---- immediate input validation (a Participant's locked profile is already complete) ----
+        if (!hasLockedProfile()) {
+            if (type.isEmpty()) { warn("Choose a participant type.", "Invalid or Missing Input"); cmbParticipantType.requestFocusInWindow(); return; }
+            if (name.isEmpty()) { warn("Participant name is required.", "Invalid or Missing Input"); txtRegName.requestFocusInWindow(); return; }
+            if (contact.isEmpty()) { warn("BU/email address is required.", "Invalid or Missing Input"); txtRegContact.requestFocusInWindow(); return; }
+            if (type.equals(EventManager.PARTICIPANT_STUDENT)) {
+                if (number.isEmpty()) { warn("Student number is required.", "Invalid or Missing Input"); txtRegNum.requestFocusInWindow(); return; }
+                if (extra.isEmpty()) { warn("Program is required.", "Invalid or Missing Input"); txtRegExtra.requestFocusInWindow(); return; }
+            } else if (type.equals(EventManager.PARTICIPANT_FACULTY)) {
+                if (number.isEmpty()) { warn("Faculty ID is required.", "Invalid or Missing Input"); txtRegNum.requestFocusInWindow(); return; }
+                if (extra.isEmpty()) { warn("Department is required.", "Invalid or Missing Input"); txtRegExtra.requestFocusInWindow(); return; }
+                if (extra2.isEmpty()) { warn("Position is required.", "Invalid or Missing Input"); txtRegExtra2.requestFocusInWindow(); return; }
+            } else if (extra.isEmpty()) {
+                warn("Affiliation / company is required.", "Invalid or Missing Input");
+                txtRegExtra.requestFocusInWindow();
+                return;
+            }
+        }
+
+        // ---- delegate to the service, then show its result ----
+        try {
+            Registration r = manager.registerForEvent(actor, event, type, name, contact, number, extra, extra2);
+            JOptionPane.showMessageDialog(this, r.getParticipant().getFullName() + " is registered for "
+                    + event.getEventName() + ".\nRegistration ID: " + r.getRegistrationId());
+            if (staff) clearForm();
+            refresh();
+        } catch (SecurityException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Not allowed", JOptionPane.WARNING_MESSAGE);
+        } catch (StorageException ex) {
+            JOptionPane.showMessageDialog(this, "The registration could not be saved:\n" + ex.getMessage(),
+                    "Cannot complete action", JOptionPane.ERROR_MESSAGE);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            warn(ex.getMessage(), "Invalid or Missing Input");
+        }
+    }//GEN-LAST:event_btnRegisterActionPerformed
+
+    private void btnRegClearActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRegClearActionPerformed
+        clearForm();
+    }//GEN-LAST:event_btnRegClearActionPerformed
+
+    private void btnSearchRegActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSearchRegActionPerformed
+        loadTable(txtSearchReg.getText());
+    }//GEN-LAST:event_btnSearchRegActionPerformed
+
+    private void txtSearchRegActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtSearchRegActionPerformed
+        loadTable(txtSearchReg.getText());
+    }//GEN-LAST:event_txtSearchRegActionPerformed
+
+    private void warn(String message, String title) {
+        JOptionPane.showMessageDialog(this, message, title, JOptionPane.WARNING_MESSAGE);
+    }
+
+    /** Cancel Selected Registration (hand-added button): check a row is chosen, confirm, then call the service. */
+    private void btnCancelRegActionPerformed(java.awt.event.ActionEvent evt) {
+        int row = regTable.getSelectedRow();
+        if (row < 0 || row >= shown.size()) {
+            JOptionPane.showMessageDialog(this, "Select a registration in the history table first.",
+                    "No registration selected", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        Registration r = shown.get(row);
+        if (!r.isActive()) {
+            JOptionPane.showMessageDialog(this, "That registration is already cancelled.",
+                    "Cancel registration", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        int choice = JOptionPane.showConfirmDialog(this,
+                "Cancel " + r.getParticipant().getFullName() + "'s registration for \""
+                + r.getEvent().getEventName() + "\"?",
+                "Cancel registration", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        if (choice != JOptionPane.YES_OPTION) return;
+        try {
+            manager.cancelRegistration(actor, r);          // ownership/staff rule, state rule and saving are in the service
+            refresh();
+        } catch (SecurityException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Not allowed", JOptionPane.WARNING_MESSAGE);
+        } catch (StorageException ex) {
+            JOptionPane.showMessageDialog(this, "The change could not be saved:\n" + ex.getMessage(),
+                    "Cannot complete action", JOptionPane.ERROR_MESSAGE);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Cannot complete action", JOptionPane.WARNING_MESSAGE);
+        }
+    }
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

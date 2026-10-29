@@ -1,3 +1,2 @@
 # type|eventId|name|date|startTime|venueId|WORKSHOP: topic,materials,speaker / SEMINAR: speaker,subject,(blank)|durationMinutes
-SEMINAR|1|Exam|2026-10-28|14:39|1|Jullie|Lear Algebra||120
-WORKSHOP|2|appdev|2026-10-28|14:39|2|masth|none|jullie|60
+SEMINAR|1|Lany Concert|2026-10-28|14:39|1|Lany|Music||90

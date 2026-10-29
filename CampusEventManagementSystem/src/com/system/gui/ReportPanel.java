@@ -8,10 +8,10 @@ import classModel.Event;
 import classModel.UserAccount;
 import com.system.service.EventManager;
 import com.system.service.EventReportRow;
+import com.system.service.ReportTotals;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import javax.swing.JOptionPane;
@@ -72,19 +72,12 @@ public class ReportPanel extends javax.swing.JPanel implements Refreshable {
         spinMinDateRange.setEditor(new JSpinner.DateEditor(spinMinDateRange, "yyyy-MM-dd"));
         spinMaxDateRange.setEditor(new JSpinner.DateEditor(spinMaxDateRange, "yyyy-MM-dd"));
 
-        cmbReportType.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{ALL_TYPES, "Workshop", "Seminar"}));
+        cmbReportType.setModel(new javax.swing.DefaultComboBoxModel<>(
+                new String[]{ALL_TYPES, EventManager.TYPE_WORKSHOP, EventManager.TYPE_SEMINAR}));
 
-        btnGanerateReport.addActionListener(e -> generate());
-        cmbSelectEvents.addActionListener(e -> { if (!updating) generate(); });
-        cmbReportType.addActionListener(e -> { if (!updating) generate(); });
-        javax.swing.event.ChangeListener dateChanged = e -> {
-            if (updating) return;
-            dateRangeEditedByUser = true;
-            generate();
-        };
-        spinMinDateRange.addChangeListener(dateChanged);
-        spinMaxDateRange.addChangeListener(dateChanged);
-
+        // The Generate button, both combo boxes and both date spinners are wired by the form
+        // (btnGanerateReportActionPerformed, cmbSelectEventsActionPerformed, cmbReportTypeActionPerformed,
+        //  spinMinDateRangeStateChanged, spinMaxDateRangeStateChanged).
         reportTable.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override public void mouseClicked(java.awt.event.MouseEvent e) {
                 if (e.getClickCount() == 2) showDetails();
@@ -115,8 +108,7 @@ public class ReportPanel extends javax.swing.JPanel implements Refreshable {
             eventChoices.clear();
             cmbSelectEvents.removeAllItems();
             cmbSelectEvents.addItem(ALL_EVENTS);
-            List<Event> sorted = new ArrayList<>(manager.getAllEvents());
-            sorted.sort(Comparator.comparing(Event::getDate).thenComparing(Event::getStartTime));
+            List<Event> sorted = manager.getEventsChronological();
             int select = 0;
             for (Event e : sorted) {
                 if (e.getEventId() == keepId) select = eventChoices.size() + 1;
@@ -126,18 +118,9 @@ public class ReportPanel extends javax.swing.JPanel implements Refreshable {
             cmbSelectEvents.setSelectedIndex(select);
 
             if (!dateRangeEditedByUser) {            // until the user picks dates, the range covers every event
-                LocalDate min = LocalDate.now();
-                LocalDate max = LocalDate.now();
-                if (!sorted.isEmpty()) {
-                    min = sorted.get(0).getDate();
-                    max = sorted.get(sorted.size() - 1).getDate();
-                    for (Event e : sorted) {
-                        if (e.getDate().isBefore(min)) min = e.getDate();
-                        if (e.getDate().isAfter(max)) max = e.getDate();
-                    }
-                }
-                spinMinDateRange.setValue(toDate(min));
-                spinMaxDateRange.setValue(toDate(max));
+                LocalDate[] range = manager.getEventDateRange();      // {earliest, latest} event date
+                spinMinDateRange.setValue(toDate(range[0]));
+                spinMaxDateRange.setValue(toDate(range[1]));
             }
         } finally {
             updating = false;
@@ -158,17 +141,14 @@ public class ReportPanel extends javax.swing.JPanel implements Refreshable {
             LocalDate to = toLocalDate(spinMaxDateRange.getValue());
 
             rows.addAll(manager.buildReport(actor, type, only, from, to));
-            int totalReg = 0;
-            int totalAttended = 0;
             for (EventReportRow r : rows) {
                 tableModel.addRow(new Object[]{r.getEventName(), r.getTotalRegistration(), r.getAttended(),
                     r.getStudents(), r.getFaculty(), r.getOthers()});
-                totalReg += r.getTotalRegistration();
-                totalAttended += r.getAttended();
             }
-            lblTotalRegNum.setText(String.valueOf(totalReg));
-            lblTotalAttendNum.setText(String.valueOf(totalAttended));
-            lblTotalAttendRateNum.setText(String.format("%.1f%%", EventManager.attendanceRate(totalAttended, totalReg)));
+            ReportTotals totals = EventManager.summarizeReport(rows);      // the numbers come from the service
+            lblTotalRegNum.setText(String.valueOf(totals.getTotalRegistrations()));
+            lblTotalAttendNum.setText(String.valueOf(totals.getTotalAttended()));
+            lblTotalAttendRateNum.setText(String.format("%.1f%%", totals.getAttendanceRatePercent()));
             lblGenerateReport.setText("Generated Report Table (" + rows.size() + " event" + (rows.size() == 1 ? "" : "s") + ")");
         } catch (SecurityException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Not allowed", JOptionPane.WARNING_MESSAGE);
@@ -239,6 +219,10 @@ public class ReportPanel extends javax.swing.JPanel implements Refreshable {
         lblFilterControls.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         lblFilterControls.setText("Filter and Controls");
 
+        cmbSelectEvents.addActionListener(this::cmbSelectEventsActionPerformed);
+
+        cmbReportType.addActionListener(this::cmbReportTypeActionPerformed);
+
         lblSelectEvents.setText("Select Event:");
 
         lblReportType.setText("Report Type:");
@@ -246,10 +230,13 @@ public class ReportPanel extends javax.swing.JPanel implements Refreshable {
         lblDataRange.setText("Date Range:");
 
         btnGanerateReport.setText("Generate Report");
+        btnGanerateReport.addActionListener(this::btnGanerateReportActionPerformed);
 
         spinMinDateRange.setModel(new javax.swing.SpinnerDateModel());
+        spinMinDateRange.addChangeListener(this::spinMinDateRangeStateChanged);
 
         spinMaxDateRange.setModel(new javax.swing.SpinnerDateModel());
+        spinMaxDateRange.addChangeListener(this::spinMaxDateRangeStateChanged);
 
         lblTo.setText("to");
 
@@ -441,6 +428,34 @@ public class ReportPanel extends javax.swing.JPanel implements Refreshable {
                 .addContainerGap())
         );
     }// </editor-fold>//GEN-END:initComponents
+
+    // ---------- Generated handlers (wired in initComponents): each one re-reads the filters and calls generate() ----------
+    private void btnGanerateReportActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnGanerateReportActionPerformed
+        generate();
+    }//GEN-LAST:event_btnGanerateReportActionPerformed
+
+    private void cmbSelectEventsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cmbSelectEventsActionPerformed
+        if (!updating) generate();
+    }//GEN-LAST:event_cmbSelectEventsActionPerformed
+
+    private void cmbReportTypeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cmbReportTypeActionPerformed
+        if (!updating) generate();
+    }//GEN-LAST:event_cmbReportTypeActionPerformed
+
+    private void spinMinDateRangeStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_spinMinDateRangeStateChanged
+        dateRangeChanged();
+    }//GEN-LAST:event_spinMinDateRangeStateChanged
+
+    private void spinMaxDateRangeStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_spinMaxDateRangeStateChanged
+        dateRangeChanged();
+    }//GEN-LAST:event_spinMaxDateRangeStateChanged
+
+    /** The user picked a date: from now on the range no longer follows the saved events. */
+    private void dateRangeChanged() {
+        if (updating) return;
+        dateRangeEditedByUser = true;
+        generate();
+    }
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

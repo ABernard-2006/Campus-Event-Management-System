@@ -99,13 +99,19 @@ public class GenerateKeyDialog extends JDialog {
         add(pnlResult, BorderLayout.CENTER);
         add(buttons, BorderLayout.SOUTH);
 
-        btnGenerate.addActionListener(e -> generate());
-        btnCopy.addActionListener(e -> copyKey());
-        btnClose.addActionListener(e -> dispose());
+        btnGenerate.addActionListener(this::btnGenerateActionPerformed);
+        btnCopy.addActionListener(this::btnCopyActionPerformed);
+        btnClose.addActionListener(this::btnCloseActionPerformed);
         getRootPane().setDefaultButton(btnGenerate);
     }
 
-    private void generate() {
+    // ---------- Handlers (hand-built dialog, so no .form) ----------
+    private void btnCopyActionPerformed(java.awt.event.ActionEvent evt) { copyKey(); }
+
+    private void btnCloseActionPerformed(java.awt.event.ActionEvent evt) { dispose(); }
+
+    /** Generate Key: read the label and the days, then ask the service (administrator check, 1-30 days, label length, saving). */
+    private void btnGenerateActionPerformed(java.awt.event.ActionEvent evt) {
         try {
             try {
                 spnDays.commitEdit();            // accept a number that was typed but not yet confirmed with Enter
