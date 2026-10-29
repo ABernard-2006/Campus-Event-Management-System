@@ -5,17 +5,13 @@
 package com.system.gui;
 
 import classModel.Event;
-import classModel.Seminar;
 import classModel.UserAccount;
 import classModel.Venue;
-import classModel.Workshop;
 import com.system.service.EventManager;
 import com.system.service.StorageException;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.List;
 import javax.swing.DefaultListModel;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
@@ -60,12 +56,7 @@ public class EventPanel extends javax.swing.JPanel implements Refreshable {
         cmbEventType.removeItem(" ");                      // blank placeholder item in the form is not a real type
         txtEventDuration.setText(String.valueOf(Event.DEFAULT_NEW_EVENT_DURATION_MINUTES));
 
-        cmbEventType.addActionListener(e -> updateTypeFields());
-        btnAddSpeaker.addActionListener(e -> addSpeaker());
-        txtEventSpeaker.addActionListener(e -> addSpeaker());
-        btnRemoveSpeaker.addActionListener(e -> removeSpeaker());
-        btnCerateEvent.addActionListener(e -> saveEvent());
-        btnEventClear.addActionListener(e -> clearOrCancel());
+        cmbEventType.addActionListener(e -> updateTypeFields());   // pure display switch, no generated handler needed
         txtEventVenue.addFocusListener(new java.awt.event.FocusAdapter() {
             @Override public void focusLost(java.awt.event.FocusEvent e) { suggestCapacity(); }
         });
@@ -80,7 +71,7 @@ public class EventPanel extends javax.swing.JPanel implements Refreshable {
 
     /** Dynamic switching: Workshop shows Topic + Materials, Seminar shows Subject only. */
     private void updateTypeFields() {
-        boolean workshop = selectedType().equals("Workshop");
+        boolean workshop = selectedType().equals(EventManager.TYPE_WORKSHOP);
         lblEventTopic.setText(workshop ? "Topic:" : "Subject:");
         lblEventMaterials.setVisible(workshop);
         txtEventMaterials.setVisible(workshop);
@@ -91,29 +82,6 @@ public class EventPanel extends javax.swing.JPanel implements Refreshable {
         if (manager == null || !txtMaxEventCap.getText().trim().isEmpty()) return;
         Venue known = manager.findVenueByName(txtEventVenue.getText());
         if (known != null) txtMaxEventCap.setText(String.valueOf(known.getCapacity()));
-    }
-
-    private void addSpeaker() {
-        String s = txtEventSpeaker.getText().trim();
-        if (s.isEmpty()) { showError("Enter a speaker name."); return; }
-        if (s.contains(",")) { showError("Enter one speaker at a time, without commas."); return; }
-        for (int i = 0; i < speakerModel.size(); i++) {
-            if (speakerModel.get(i).equalsIgnoreCase(s)) { showError(s + " is already in the speaker list."); return; }
-        }
-        speakerModel.addElement(s);
-        txtEventSpeaker.setText("");
-        txtEventSpeaker.requestFocusInWindow();
-    }
-
-    private void removeSpeaker() {
-        int i = lstSpeakers.getSelectedIndex();
-        if (i < 0) { showError("Select a speaker to remove."); return; }
-        speakerModel.remove(i);
-    }
-
-    private void clearOrCancel() {
-        if (editing != null) exitEditMode();
-        else clearForm();
     }
 
     private void clearForm() {
@@ -170,94 +138,7 @@ public class EventPanel extends javax.swing.JPanel implements Refreshable {
         if (editing != null && manager != null && manager.findEventById(editing.getEventId()) == null) exitEditMode();
     }
 
-    // ---------- create / save ----------
-    private void saveEvent() {
-        try {
-            if (manager == null) throw new IllegalStateException("No EventManager connected to this panel.");
-
-            // spinners hold java.util.Date -> convert to LocalDate / LocalTime
-            java.util.Date d = (java.util.Date) SpinEventDate.getValue();
-            java.util.Date t = (java.util.Date) SpinEventType.getValue();
-            LocalDate date = d.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-            LocalTime time = t.toInstant().atZone(ZoneId.systemDefault()).toLocalTime()
-                              .withSecond(0).withNano(0);
-
-            String eventName = txtEventName.getText().trim();
-            String venueName = txtEventVenue.getText().trim();
-            String topic = txtEventTopic.getText().trim();
-            String materials = txtEventMaterials.getText().trim();
-            String type = selectedType();
-
-            if (eventName.isEmpty()) throw new IllegalArgumentException("Event name is required.");
-            if (eventName.length() > 100) throw new IllegalArgumentException("Event name must be 100 characters or fewer.");
-            if (venueName.isEmpty()) throw new IllegalArgumentException("Venue is required.");
-            if (venueName.length() > 60) throw new IllegalArgumentException("Venue name must be 60 characters or fewer.");
-            if (!type.equals("Workshop") && !type.equals("Seminar"))
-                throw new IllegalArgumentException("Choose an event type (Workshop or Seminar).");
-            boolean dateChanged = editing == null || !editing.getDate().equals(date);
-            if (dateChanged && date.isBefore(LocalDate.now()))
-                throw new IllegalArgumentException("Event date cannot be in the past.");
-
-            int durationMinutes = parseDuration(txtEventDuration.getText());
-
-            int capacity;
-            try {
-                String capacityText = txtMaxEventCap.getText().trim();
-                if (capacityText.isEmpty()) throw new NumberFormatException();
-                capacity = Integer.parseInt(capacityText);
-            } catch (NumberFormatException ex) {
-                throw new IllegalArgumentException("Max capacity is required and must be a whole number.");
-            }
-            if (capacity <= 0) throw new IllegalArgumentException("Max capacity must be greater than zero.");
-
-            if (speakerModel.isEmpty()) throw new IllegalArgumentException("Add at least one speaker.");
-            if (type.equals("Workshop")) {
-                if (topic.isEmpty()) throw new IllegalArgumentException("Workshop topic is required.");
-                if (materials.isEmpty()) throw new IllegalArgumentException("Workshop materials are required.");
-            } else if (topic.isEmpty()) {
-                throw new IllegalArgumentException("Seminar subject is required.");
-            }
-            List<String> names = new ArrayList<>(java.util.Collections.list(speakerModel.elements()));
-            String speakers = String.join(", ", names);
-
-            // Reuse the saved venue with this name, so two events in "Room 101" share ONE venue record.
-            Venue venue = manager.findVenueByName(venueName);
-            if (venue == null) {
-                venue = new Venue(venueName, "TBA", capacity);
-            } else if (venue.getCapacity() != capacity) {
-                throw new IllegalArgumentException("The venue \"" + venue.getVenueName() + "\" already exists with a capacity of "
-                        + venue.getCapacity() + ". Use that capacity or choose a different venue name.");
-            }
-
-            String doneMessage;
-            if (editing == null) {
-                Event event;
-                if (type.equals("Workshop")) {
-                    event = new Workshop(eventName, date, time, durationMinutes, venue, topic, materials, speakers);
-                } else {
-                    event = new Seminar(eventName, date, time, durationMinutes, venue, speakers, topic);
-                }
-                manager.addEvent(actor, event);            // permission, venue and schedule-conflict rules are enforced here
-                doneMessage = "Created: " + event.getEventName() + "\nRuns " + event.getTimeRangeText()
-                        + " (" + event.getDurationText() + ")";
-                clearForm();
-            } else {
-                manager.updateEvent(actor, editing, eventName, date, time, durationMinutes, venue, speakers, topic, materials);
-                doneMessage = "Saved changes to: " + editing.getEventName() + "\nRuns " + editing.getTimeRangeText()
-                        + " (" + editing.getDurationText() + ")";
-                exitEditMode();
-            }
-            JOptionPane.showMessageDialog(this, doneMessage);
-            if (onSaved != null) onSaved.run();
-        } catch (SecurityException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Not allowed", JOptionPane.WARNING_MESSAGE);
-        } catch (StorageException ex) {
-            showError("The event could not be saved to the data files:\n" + ex.getMessage());
-        } catch (IllegalArgumentException | IllegalStateException ex) {
-            showError(ex.getMessage());
-        }
-    }
-
+    // ---------- input parsing (GUI-level) ----------
     /**
      * Turns the Duration box into minutes. Explains exactly what is wrong when it is empty, not a
      * whole number, zero/negative, or longer than Event.MAX_DURATION_MINUTES. (EventManager and Event
@@ -335,8 +216,10 @@ public class EventPanel extends javax.swing.JPanel implements Refreshable {
         cmbEventType.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Workshop", "Seminar", " " }));
 
         btnCerateEvent.setText("Create Event");
+        btnCerateEvent.addActionListener(this::btnCerateEventActionPerformed);
 
         btnEventClear.setText("Clear");
+        btnEventClear.addActionListener(this::btnEventClearActionPerformed);
 
         lblEventName.setText("Event name:");
 
@@ -351,8 +234,10 @@ public class EventPanel extends javax.swing.JPanel implements Refreshable {
         txtEventSpeaker.addActionListener(this::txtEventSpeakerActionPerformed);
 
         btnAddSpeaker.setText("+ Add Speaker");
+        btnAddSpeaker.addActionListener(this::btnAddSpeakerActionPerformed);
 
         btnRemoveSpeaker.setText("- Remove Speaker");
+        btnRemoveSpeaker.addActionListener(this::btnRemoveSpeakerActionPerformed);
 
         lblAddedSpeaker.setText("Added Speaker/s: ");
 
@@ -508,20 +393,136 @@ public class EventPanel extends javax.swing.JPanel implements Refreshable {
     }// </editor-fold>//GEN-END:initComponents
 
     private void txtEventNameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtEventNameActionPerformed
-        // TODO add your handling code here:
+        // Intentionally empty: Enter in this box does nothing; the Create / Save button does the work.
     }//GEN-LAST:event_txtEventNameActionPerformed
 
     private void txtEventSpeakerActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtEventSpeakerActionPerformed
-        // TODO add your handling code here:
+        btnAddSpeakerActionPerformed(evt);                 // pressing Enter in the speaker box = "+ Add Speaker"
     }//GEN-LAST:event_txtEventSpeakerActionPerformed
 
     private void txtMaxEventCapActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtMaxEventCapActionPerformed
-        // TODO add your handling code here:
+        // Intentionally empty: Enter in this box does nothing; the Create / Save button does the work.
     }//GEN-LAST:event_txtMaxEventCapActionPerformed
 
     private void txtEventTopicActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtEventTopicActionPerformed
-        // TODO add your handling code here:
+        // Intentionally empty: Enter in this box does nothing; the Create / Save button does the work.
     }//GEN-LAST:event_txtEventTopicActionPerformed
+
+    private void btnAddSpeakerActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAddSpeakerActionPerformed
+        String speaker = txtEventSpeaker.getText().trim();
+        if (speaker.isEmpty()) { showError("Enter a speaker name."); txtEventSpeaker.requestFocusInWindow(); return; }
+        if (speaker.contains(",")) { showError("Enter one speaker at a time, without commas."); txtEventSpeaker.requestFocusInWindow(); return; }
+        for (int i = 0; i < speakerModel.size(); i++) {
+            if (speakerModel.get(i).equalsIgnoreCase(speaker)) {
+                showError(speaker + " is already in the speaker list.");
+                txtEventSpeaker.requestFocusInWindow();
+                return;
+            }
+        }
+        speakerModel.addElement(speaker);                  // the list is only form state; it is sent to the service on save
+        txtEventSpeaker.setText("");
+        txtEventSpeaker.requestFocusInWindow();
+    }//GEN-LAST:event_btnAddSpeakerActionPerformed
+
+    private void btnRemoveSpeakerActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRemoveSpeakerActionPerformed
+        int i = lstSpeakers.getSelectedIndex();
+        if (i < 0) { showError("Select a speaker to remove."); return; }
+        speakerModel.remove(i);
+    }//GEN-LAST:event_btnRemoveSpeakerActionPerformed
+
+    private void btnEventClearActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEventClearActionPerformed
+        if (editing != null) exitEditMode();
+        else clearForm();
+    }//GEN-LAST:event_btnEventClearActionPerformed
+
+    /**
+     * Create Event / Save Changes. Flow: read the fields -> immediate checks (empty or malformed input,
+     * with focus on the offending field) -> EventManager.createEvent / updateEvent (permission, length,
+     * date, capacity, venue and schedule-conflict rules) -> show the result.
+     */
+    private void btnCerateEventActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCerateEventActionPerformed
+        if (manager == null) { showError("No EventManager connected to this panel."); return; }
+
+        String type = selectedType();
+        String eventName = txtEventName.getText().trim();
+        String venueName = txtEventVenue.getText().trim();
+        String topic = txtEventTopic.getText().trim();
+        String materials = txtEventMaterials.getText().trim();
+        boolean workshop = type.equals(EventManager.TYPE_WORKSHOP);
+
+        // ---- immediate input validation (empty / malformed) ----
+        if (!workshop && !type.equals(EventManager.TYPE_SEMINAR)) {
+            showError("Choose an event type (Workshop or Seminar).");
+            cmbEventType.requestFocusInWindow();
+            return;
+        }
+        if (eventName.isEmpty()) { showError("Event name is required."); txtEventName.requestFocusInWindow(); return; }
+        if (venueName.isEmpty()) { showError("Venue is required."); txtEventVenue.requestFocusInWindow(); return; }
+
+        int durationMinutes;
+        try {
+            durationMinutes = parseDuration(txtEventDuration.getText());
+        } catch (IllegalArgumentException ex) {
+            showError(ex.getMessage());
+            txtEventDuration.requestFocusInWindow();
+            return;
+        }
+
+        int capacity;
+        String capacityText = txtMaxEventCap.getText().trim();
+        try {
+            capacity = Integer.parseInt(capacityText);
+        } catch (NumberFormatException ex) {
+            showError("Max capacity is required and must be a whole number.");
+            txtMaxEventCap.requestFocusInWindow();
+            return;
+        }
+
+        if (speakerModel.isEmpty()) { showError("Add at least one speaker."); txtEventSpeaker.requestFocusInWindow(); return; }
+        if (topic.isEmpty()) {
+            showError(workshop ? "Workshop topic is required." : "Seminar subject is required.");
+            txtEventTopic.requestFocusInWindow();
+            return;
+        }
+        if (workshop && materials.isEmpty()) {
+            showError("Workshop materials are required.");
+            txtEventMaterials.requestFocusInWindow();
+            return;
+        }
+
+        // spinners hold java.util.Date -> convert to LocalDate / LocalTime
+        java.util.Date d = (java.util.Date) SpinEventDate.getValue();
+        java.util.Date t = (java.util.Date) SpinEventType.getValue();
+        LocalDate date = d.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        LocalTime time = t.toInstant().atZone(ZoneId.systemDefault()).toLocalTime().withSecond(0).withNano(0);
+        String speakers = String.join(", ", java.util.Collections.list(speakerModel.elements()));
+
+        // ---- delegate to the service, then show its result ----
+        try {
+            String doneMessage;
+            if (editing == null) {
+                Event created = manager.createEvent(actor, type, eventName, date, time, durationMinutes,
+                        venueName, capacity, speakers, topic, materials);
+                doneMessage = "Created: " + created.getEventName() + "\nRuns " + created.getTimeRangeText()
+                        + " (" + created.getDurationText() + ")";
+                clearForm();
+            } else {
+                manager.updateEvent(actor, editing, eventName, date, time, durationMinutes,
+                        venueName, capacity, speakers, topic, materials);
+                doneMessage = "Saved changes to: " + editing.getEventName() + "\nRuns " + editing.getTimeRangeText()
+                        + " (" + editing.getDurationText() + ")";
+                exitEditMode();
+            }
+            JOptionPane.showMessageDialog(this, doneMessage);
+            if (onSaved != null) onSaved.run();
+        } catch (SecurityException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Not allowed", JOptionPane.WARNING_MESSAGE);
+        } catch (StorageException ex) {
+            showError("The event could not be saved to the data files:\n" + ex.getMessage());
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            showError(ex.getMessage());
+        }
+    }//GEN-LAST:event_btnCerateEventActionPerformed
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

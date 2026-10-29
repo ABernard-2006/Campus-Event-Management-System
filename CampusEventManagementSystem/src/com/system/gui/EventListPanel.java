@@ -37,6 +37,10 @@ public class EventListPanel extends JPanel implements Refreshable {
     };
     private final JTable table = new JTable(model);
     private final JTextField txtSearch = new JTextField(16);
+    private final JButton btnSearch = new JButton("Search");
+    private final JButton btnShowAll = new JButton("Show All");
+    private final JButton btnEdit = new JButton("Edit Selected");
+    private final JButton btnDelete = new JButton("Delete Selected");
     private final JLabel lblCount = new JLabel(" ");
     private List<Event> shown = new java.util.ArrayList<>();      // same order as the table rows
 
@@ -55,8 +59,6 @@ public class EventListPanel extends JPanel implements Refreshable {
 
         JLabel title = new JLabel("All Events");
         title.setFont(new java.awt.Font("Segoe UI", 1, 18));
-        JButton btnSearch = new JButton("Search");
-        JButton btnShowAll = new JButton("Show All");
         JPanel top = new JPanel(new BorderLayout());
         top.setOpaque(false);
         JPanel searchBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
@@ -79,8 +81,6 @@ public class EventListPanel extends JPanel implements Refreshable {
         table.getColumnModel().getColumn(9).setPreferredWidth(150);    // Speaker(s)
         add(new JScrollPane(table), BorderLayout.CENTER);
 
-        JButton btnEdit = new JButton("Edit Selected");
-        JButton btnDelete = new JButton("Delete Selected");
         JPanel bottom = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         bottom.setOpaque(false);
         bottom.add(btnEdit);
@@ -88,17 +88,31 @@ public class EventListPanel extends JPanel implements Refreshable {
         bottom.add(lblCount);
         add(bottom, BorderLayout.SOUTH);
 
-        btnSearch.addActionListener(e -> refresh());
-        txtSearch.addActionListener(e -> refresh());
-        btnShowAll.addActionListener(e -> { txtSearch.setText(""); refresh(); });
-        btnEdit.addActionListener(e -> editSelected());
-        btnDelete.addActionListener(e -> deleteSelected());
-        table.addMouseListener(new java.awt.event.MouseAdapter() {
+        btnSearch.addActionListener(this::btnSearchActionPerformed);
+        txtSearch.addActionListener(this::txtSearchActionPerformed);
+        btnShowAll.addActionListener(this::btnShowAllActionPerformed);
+        btnEdit.addActionListener(this::btnEditActionPerformed);
+        btnDelete.addActionListener(this::btnDeleteActionPerformed);
+        table.addMouseListener(new java.awt.event.MouseAdapter() {      // double-click a row = Edit Selected
             @Override public void mouseClicked(java.awt.event.MouseEvent e) {
                 if (e.getClickCount() == 2) editSelected();
             }
         });
     }
+
+    // ---------- Handlers (hand-built panel, so no .form): each reads the GUI, then calls the service or refreshes ----------
+    private void btnSearchActionPerformed(java.awt.event.ActionEvent evt) { refresh(); }
+
+    private void txtSearchActionPerformed(java.awt.event.ActionEvent evt) { refresh(); }
+
+    private void btnShowAllActionPerformed(java.awt.event.ActionEvent evt) {
+        txtSearch.setText("");
+        refresh();
+    }
+
+    private void btnEditActionPerformed(java.awt.event.ActionEvent evt) { editSelected(); }
+
+    private void btnDeleteActionPerformed(java.awt.event.ActionEvent evt) { deleteSelected(); }
 
     /** Re-reads the events from the manager (keeps the selected event selected when it still exists). */
     @Override
@@ -107,8 +121,7 @@ public class EventListPanel extends JPanel implements Refreshable {
         int row = table.getSelectedRow();
         if (row >= 0 && row < shown.size()) selectedId = shown.get(row).getEventId();
 
-        shown = new java.util.ArrayList<>(manager.searchEvent(txtSearch.getText()));
-        shown.sort(java.util.Comparator.comparing(Event::getDate).thenComparing(Event::getStartTime));
+        shown = manager.searchEventsChronological(txtSearch.getText());
         model.setRowCount(0);
         for (Event e : shown) {
             model.addRow(new Object[]{e.getEventId(), e.getEventName(), e.getEventType(),
@@ -140,7 +153,13 @@ public class EventListPanel extends JPanel implements Refreshable {
     private void deleteSelected() {
         Event e = selectedEvent();
         if (e == null) return;
-        int regs = manager.getRegistrationsFor(actor, e).size();
+        int regs;
+        try {
+            regs = manager.getRegistrationsFor(actor, e).size();
+        } catch (SecurityException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Not allowed", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         String warning = "Delete \"" + e.getEventName() + "\"?\n\n"
                 + (regs == 0 ? "Nobody is registered for it."
                         : "This also permanently removes its " + regs + " registration record(s) and their attendance records.")

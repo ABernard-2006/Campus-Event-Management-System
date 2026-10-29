@@ -280,7 +280,18 @@ public class SignInFrame extends javax.swing.JFrame {
         char[] confirm = passConfirmPass.getPassword();
         String role = (String) cmbRegisterAs.getSelectedItem();
         try {
-            // All the rules (no Administrator accounts, key checks, duplicates) live in EventManager.
+            // ---- immediate input validation (empty fields / mismatch; focus on the field to fix) ----
+            if (txtSignInUser.getText().trim().isEmpty()) { warn("Username is required.", txtSignInUser); return; }
+            if (txtEmailAdd.getText().trim().isEmpty()) { warn("Email address is required.", txtEmailAdd); return; }
+            if (password.length == 0) { warn("Password is required.", passCreatePass); return; }
+            if (!Arrays.equals(password, confirm)) { warn("Passwords do not match.", passConfirmPass); return; }
+            if (UserAccount.ROLE_ORGANIZER.equals(role) && txtInviteKey.getText().trim().isEmpty()) {
+                warn("An invitation key is required to register as an Organizer.", txtInviteKey);
+                return;
+            }
+
+            // ---- delegate to the service: every rule (no Administrator sign-up, key checks, unique
+            //      username/email, password rules) is enforced inside EventManager.registerAccount ----
             UserAccount created = manager.registerAccount(
                     txtSignInUser.getText(), txtEmailAdd.getText(),
                     new String(password), new String(confirm),
@@ -296,6 +307,11 @@ public class SignInFrame extends javax.swing.JFrame {
             Arrays.fill(confirm, '\0');
         }
     }//GEN-LAST:event_btnSignInActionPerformed
+
+    private void warn(String message, java.awt.Component focusTarget) {
+        JOptionPane.showMessageDialog(this, message, "Registration", JOptionPane.WARNING_MESSAGE);
+        focusTarget.requestFocusInWindow();
+    }
 
     /**
      * @param args the command line arguments

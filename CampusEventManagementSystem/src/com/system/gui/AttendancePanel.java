@@ -9,7 +9,6 @@ import com.system.service.StorageException;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -41,6 +40,8 @@ public class AttendancePanel extends JPanel implements Refreshable {
     };
     private final JTable table = new JTable(model);
     private final JLabel lblSummary = new JLabel(" ");
+    private JButton btnPresent;
+    private JButton btnAbsent;
 
     public AttendancePanel(EventManager manager, UserAccount actor) {
         this.manager = manager;
@@ -74,8 +75,8 @@ public class AttendancePanel extends JPanel implements Refreshable {
         table.getColumnModel().getColumn(3).setPreferredWidth(150);
         add(new JScrollPane(table), BorderLayout.CENTER);
 
-        JButton btnPresent = new JButton("Mark Present");
-        JButton btnAbsent = new JButton("Mark Absent");
+        btnPresent = new JButton("Mark Present");
+        btnAbsent = new JButton("Mark Absent");
         JPanel bottom = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         bottom.setOpaque(false);
         bottom.add(btnPresent);
@@ -83,9 +84,9 @@ public class AttendancePanel extends JPanel implements Refreshable {
         bottom.add(lblSummary);
         add(bottom, BorderLayout.SOUTH);
 
-        cmbEvent.addActionListener(e -> { if (!loading) loadRegistrations(); });
-        btnPresent.addActionListener(e -> mark(true));
-        btnAbsent.addActionListener(e -> mark(false));
+        cmbEvent.addActionListener(this::cmbEventActionPerformed);
+        btnPresent.addActionListener(this::btnPresentActionPerformed);
+        btnAbsent.addActionListener(this::btnAbsentActionPerformed);
     }
 
     /** Rebuilds the event list and the table, keeping the same event selected when it still exists. */
@@ -98,8 +99,7 @@ public class AttendancePanel extends JPanel implements Refreshable {
         loading = true;
         eventChoices.clear();
         cmbEvent.removeAllItems();
-        List<Event> sorted = new ArrayList<>(manager.getAllEvents());
-        sorted.sort(Comparator.comparing(Event::getDate).thenComparing(Event::getStartTime));
+        List<Event> sorted = manager.getEventsChronological();
         int select = sorted.isEmpty() ? -1 : 0;
         for (Event e : sorted) {
             if (e.getEventId() == keepId) select = eventChoices.size();
@@ -144,6 +144,15 @@ public class AttendancePanel extends JPanel implements Refreshable {
         lblSummary.setText("Registered: " + manager.countActive(event) + "   Present: " + manager.countAttended(event));
     }
 
+    private void cmbEventActionPerformed(java.awt.event.ActionEvent evt) {
+        if (!loading) loadRegistrations();
+    }
+
+    private void btnPresentActionPerformed(java.awt.event.ActionEvent evt) { mark(true); }
+
+    private void btnAbsentActionPerformed(java.awt.event.ActionEvent evt) { mark(false); }
+
+    /** Reads the selected rows, then asks EventManager.markAttendance (staff-only, one record per registration) for each. */
     private void mark(boolean present) {
         int[] rows = table.getSelectedRows();
         if (rows.length == 0) {

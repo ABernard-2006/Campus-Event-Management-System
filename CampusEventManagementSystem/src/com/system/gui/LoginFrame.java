@@ -10,9 +10,6 @@ package com.system.gui;
  */
 import classModel.UserAccount;
 import com.system.service.EventManager;
-import com.system.service.LoginPreferences;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 
 public class LoginFrame extends javax.swing.JFrame {
@@ -63,17 +60,13 @@ public class LoginFrame extends javax.swing.JFrame {
         });
 
         // Remember me: bring back the saved username and role (never a password)
-        String[] remembered = LoginPreferences.load(dataDirectory());
+        String[] remembered = manager.getRememberedLogin();
         if (remembered != null) {
             txtEmail.setText(remembered[0]);
             if (!remembered[1].isEmpty()) cmdParticipants.setSelectedItem(remembered[1]);
             checkRemember.setSelected(true);
             javax.swing.SwingUtilities.invokeLater(() -> txtPassword.requestFocusInWindow());
         }
-    }
-
-    private Path dataDirectory() {
-        return Paths.get(manager.getDataDirectory());
     }
 
     // ------------------------------------------------------------------
@@ -223,17 +216,31 @@ public class LoginFrame extends javax.swing.JFrame {
         char[] typedPassword = txtPassword.getPassword();
         String role = (String) cmdParticipants.getSelectedItem();
         try {
+            // ---- immediate input validation (the service repeats these checks) ----
+            if (identifier.isEmpty()) {
+                javax.swing.JOptionPane.showMessageDialog(this, "Enter your username or email.", "Login", javax.swing.JOptionPane.WARNING_MESSAGE);
+                txtEmail.requestFocusInWindow();
+                return;
+            }
+            if (typedPassword.length == 0) {
+                javax.swing.JOptionPane.showMessageDialog(this, "Enter your password.", "Login", javax.swing.JOptionPane.WARNING_MESSAGE);
+                txtPassword.requestFocusInWindow();
+                return;
+            }
+            if (role == null || role.trim().isEmpty()) {
+                javax.swing.JOptionPane.showMessageDialog(this, "Select the role you are logging in as.", "Login", javax.swing.JOptionPane.WARNING_MESSAGE);
+                cmdParticipants.requestFocusInWindow();
+                return;
+            }
+
+            // ---- delegate authentication to the service, then handle its result ----
             UserAccount account = manager.authenticate(identifier, new String(typedPassword), role);
             if (account == null) {
                 handleFailedLogin();
                 return;
             }
             failedAttempts = 0;
-            if (checkRemember.isSelected()) {
-                LoginPreferences.save(dataDirectory(), account.getUsername(), account.getRole());
-            } else {
-                LoginPreferences.clear(dataDirectory());
-            }
+            manager.rememberLogin(account, checkRemember.isSelected());     // saves or forgets username + role only
             openDashboard(account);
         } catch (IllegalArgumentException | IllegalStateException ex) {
             // empty fields, no accounts yet, or a storage problem

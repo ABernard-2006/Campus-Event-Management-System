@@ -110,6 +110,15 @@ public class EventManager {
                 && (UserAccount.ROLE_ADMIN.equals(actor.getRole()) || UserAccount.ROLE_ORGANIZER.equals(actor.getRole()));
     }
 
+    /** Who may create, edit and delete events and record attendance. Same rule the service enforces. */
+    public boolean canManageEvents(UserAccount actor) { return isStaff(actor); }
+
+    /** Who may open the reports. Same rule buildReport enforces. */
+    public boolean canViewReports(UserAccount actor) { return isStaff(actor); }
+
+    /** Who may generate, list and revoke organizer invitation keys (saved administrators only). */
+    public boolean canManageOrganizerKeys(UserAccount actor) { return isAdministrator(actor); }
+
     private void requireStaff(UserAccount actor, String action) {
         if (!isStaff(actor))
             throw new SecurityException("Only an Administrator or Organizer can " + action + ".");
@@ -879,6 +888,122 @@ public class EventManager {
         fireChanged();
     }
 
+    // ---------------------------------------------------------------------
+    //  Event create / edit from plain form values (Part 6.1)
+    //  The screen only reads its fields and checks they are filled in / numeric.
+    //  Every business rule below is enforced here, so it holds without the form.
+    // ---------------------------------------------------------------------
+    public static final int MAX_EVENT_NAME_LENGTH = 100;
+    public static final int MAX_VENUE_NAME_LENGTH = 60;
+    public static final String TYPE_WORKSHOP = "Workshop";
+    public static final String TYPE_SEMINAR = "Seminar";
+
+    /**
+     * Checks the rules every event must satisfy, before anything is created or changed.
+     *
+     * @param dateMustBeFuture true when the date is new (creating, or editing to a different date):
+     *                         a date before today is rejected. An unchanged date is never re-checked,
+     *                         so an old event can still be edited.
+     */
+    private void validateEventFields(String type, String name, LocalDate date, LocalTime time,
+                                     String venueName, int capacity, String speakers,
+                                     String topicOrSubject, String materials, boolean dateMustBeFuture) {
+        String n = name == null ? "" : name.trim();
+        String v = venueName == null ? "" : venueName.trim();
+        if (n.isEmpty()) throw new IllegalArgumentException("Event name is required.");
+        if (n.length() > MAX_EVENT_NAME_LENGTH)
+            throw new IllegalArgumentException("Event name must be " + MAX_EVENT_NAME_LENGTH + " characters or fewer.");
+        if (v.isEmpty()) throw new IllegalArgumentException("Venue is required.");
+        if (v.length() > MAX_VENUE_NAME_LENGTH)
+            throw new IllegalArgumentException("Venue name must be " + MAX_VENUE_NAME_LENGTH + " characters or fewer.");
+        if (!TYPE_WORKSHOP.equals(type) && !TYPE_SEMINAR.equals(type))
+            throw new IllegalArgumentException("Choose an event type (Workshop or Seminar).");
+        if (date == null) throw new IllegalArgumentException("Event date is required.");
+        if (time == null) throw new IllegalArgumentException("Start time is required.");
+        if (dateMustBeFuture && date.isBefore(LocalDate.now()))
+            throw new IllegalArgumentException("Event date cannot be in the past.");
+        if (capacity <= 0) throw new IllegalArgumentException("Max capacity must be greater than zero.");
+        if (speakers == null || speakers.trim().isEmpty()) throw new IllegalArgumentException("Add at least one speaker.");
+        String t = topicOrSubject == null ? "" : topicOrSubject.trim();
+        if (TYPE_WORKSHOP.equals(type)) {
+            if (t.isEmpty()) throw new IllegalArgumentException("Workshop topic is required.");
+            if (materials == null || materials.trim().isEmpty())
+                throw new IllegalArgumentException("Workshop materials are required.");
+        } else if (t.isEmpty()) {
+            throw new IllegalArgumentException("Seminar subject is required.");
+        }
+    }
+
+    /**
+     * Venue to use for a typed name + capacity: the saved venue with that name (its capacity must match),
+     * otherwise a NEW unsaved venue (location "TBA"). Two events typed as "Room 101" therefore share ONE
+     * venue record, which is what makes the schedule-conflict rule work.
+     *
+     * @throws IllegalArgumentException when the name exists with a different capacity
+     */
+    private Venue venueFor(String venueName, int capacity) {
+        Venue known = findVenueByName(venueName);
+        if (known == null) return new Venue(venueName.trim(), "TBA", capacity);
+        if (known.getCapacity() != capacity)
+            throw new IllegalArgumentException("The venue \"" + known.getVenueName() + "\" already exists with a capacity of "
+                    + known.getCapacity() + ". Use that capacity or choose a different venue name.");
+        return known;
+    }
+
+    /**
+     * Creates a Workshop or Seminar from form values. Staff only.
+     * Enforces: permission, required fields and lengths, type, date not in the past, duration range,
+     * venue/capacity agreement and venue schedule conflicts. Nothing is changed (and no ID is used up)
+     * when any rule fails.
+     *
+     * @param type            "Workshop" or "Seminar"
+     * @param speakers        comma-separated speaker names
+     * @param topicOrSubject  workshop topic, or seminar subject
+     * @param materials       workshop materials (ignored for seminars)
+     * @return the saved event
+     * @throws SecurityException        when the actor is not an Administrator or Organizer
+     * @throws IllegalArgumentException when a field is missing or invalid
+     * @throws IllegalStateException    on a venue schedule conflict (StorageException if saving fails)
+     */
+    public Event createEvent(UserAccount actor, String type, String name, LocalDate date, LocalTime time,
+                             int durationMinutes, String venueName, int capacity, String speakers,
+                             String topicOrSubject, String materials) {
+        requireStaff(actor, "create events");
+        validateEventFields(type, name, date, time, venueName, capacity, speakers, topicOrSubject, materials, true);
+        Event.validateDuration(durationMinutes);
+        Venue venue = venueFor(venueName, capacity);
+        // Check the schedule BEFORE building the event so a rejected attempt does not consume an event ID.
+        if (venues.contains(venue)) checkConflict(null, venue, date, time, durationMinutes);
+        Event event;
+        if (TYPE_WORKSHOP.equals(type)) {
+            event = new Workshop(name, date, time, durationMinutes, venue,
+                    topicOrSubject.trim(), materials.trim(), speakers.trim());
+        } else {
+            event = new Seminar(name, date, time, durationMinutes, venue, speakers.trim(), topicOrSubject.trim());
+        }
+        addEvent(actor, event);
+        return event;
+    }
+
+    /**
+     * Edits an existing event from form values. Staff only. The event type cannot change.
+     * Same rules as {@link #createEvent}, except that the date is only checked against "today"
+     * when it was actually changed, plus the existing rule that the new venue must still hold
+     * everyone who is registered.
+     */
+    public void updateEvent(UserAccount actor, Event event, String name, LocalDate date, LocalTime time,
+                            int durationMinutes, String venueName, int capacity, String speakers,
+                            String topicOrSubject, String materials) {
+        requireStaff(actor, "edit events");
+        if (event == null || !events.contains(event)) throw new IllegalArgumentException("Select an event to update.");
+        boolean dateChanged = date == null || !event.getDate().equals(date);
+        validateEventFields(event.getEventType(), name, date, time, venueName, capacity, speakers,
+                topicOrSubject, materials, dateChanged);
+        Event.validateDuration(durationMinutes);
+        updateEvent(actor, event, name, date, time, durationMinutes, venueFor(venueName, capacity),
+                speakers.trim(), topicOrSubject.trim(), materials == null ? "" : materials.trim());
+    }
+
     /** Deletes an event together with its registrations and attendance records. */
     public void deleteEvent(UserAccount actor, Event event) {
         requireStaff(actor, "delete events");
@@ -943,9 +1068,57 @@ public class EventManager {
         return result;
     }
 
+    /** Every event, earliest first (date, then start time). A new list: safe to modify. */
+    public List<Event> getEventsChronological() {
+        List<Event> result = new ArrayList<>(events);
+        result.sort(Comparator.comparing(Event::getDate).thenComparing(Event::getStartTime));
+        return result;
+    }
+
+    /** Events matching the keyword (see searchEvent), earliest first. */
+    public List<Event> searchEventsChronological(String keyword) {
+        List<Event> result = searchEvent(keyword);
+        result.sort(Comparator.comparing(Event::getDate).thenComparing(Event::getStartTime));
+        return result;
+    }
+
     // =====================================================================
     //  PARTICIPANTS / ORGANIZATIONS / ORGANIZERS
     // =====================================================================
+    /**
+     * Orders events for the dashboard cards: upcoming events first (soonest first), then past
+     * events (most recent first). Returns a new list; the input is not changed.
+     */
+    public static List<Event> orderForDisplay(java.util.Collection<Event> source) {
+        LocalDate today = LocalDate.now();
+        Comparator<Event> soonestFirst = Comparator.comparing(Event::getDate).thenComparing(Event::getStartTime);
+        List<Event> upcoming = new ArrayList<>();
+        List<Event> past = new ArrayList<>();
+        for (Event e : source) (e.getDate().isBefore(today) ? past : upcoming).add(e);
+        upcoming.sort(soonestFirst);
+        past.sort(soonestFirst.reversed());
+        upcoming.addAll(past);
+        return upcoming;
+    }
+
+    /** Every date that has at least one event (for the calendar dots). */
+    public java.util.Set<LocalDate> getEventDates() {
+        java.util.Set<LocalDate> dates = new java.util.HashSet<>();
+        for (Event e : events) dates.add(e.getDate());
+        return dates;
+    }
+
+    /** {earliest, latest} event date, or {today, today} when there are no events. Used as the default report range. */
+    public LocalDate[] getEventDateRange() {
+        LocalDate min = null, max = null;
+        for (Event e : events) {
+            if (min == null || e.getDate().isBefore(min)) min = e.getDate();
+            if (max == null || e.getDate().isAfter(max)) max = e.getDate();
+        }
+        LocalDate today = LocalDate.now();
+        return new LocalDate[] { min == null ? today : min, max == null ? today : max };
+    }
+
     public Participant findParticipantById(int id) {
         for (Participant p : participants) if (p.getParticipantId() == id) return p;
         return null;
@@ -1116,6 +1289,91 @@ public class EventManager {
         }
         fireChanged();
         return r;
+    }
+
+    public static final String PARTICIPANT_STUDENT = "Student";
+    public static final String PARTICIPANT_FACULTY = "Faculty";
+    public static final String PARTICIPANT_OTHERS = "Others";
+
+    /**
+     * Registers someone for an event from form values (Part 6.1). Decides WHO is being registered,
+     * validates the type-specific fields, builds a new participant when needed and then applies
+     * {@link #register}.
+     *
+     * Who is registered:
+     *  - Staff: the saved participant matching the Student/Faculty number (or the Others name),
+     *    otherwise a new one built from the values.
+     *  - A Participant account: ALWAYS its own profile. {@code contact} is ignored and replaced by the
+     *    account's email. If that profile already exists the other fields are ignored (the profile is locked);
+     *    otherwise the profile is created from the values.
+     *
+     * @param type   "Student", "Faculty" or "Others"
+     * @param number Student number or Faculty ID (ignored for Others)
+     * @param extra  Program (Student), Department (Faculty) or Affiliation (Others)
+     * @param extra2 Position (Faculty only)
+     * @throws SecurityException        when the actor is not logged in with a saved account
+     * @throws IllegalArgumentException when a required field is missing or the contact is malformed
+     * @throws IllegalStateException    when the event is over/full or the person is already registered
+     */
+    public Registration registerForEvent(UserAccount actor, Event event, String type, String name,
+                                         String contact, String number, String extra, String extra2) {
+        if (!isKnownAccount(actor)) throw new SecurityException("Log in to register for an event.");
+        if (event == null) throw new IllegalArgumentException("No event selected. There may be no upcoming events yet.");
+        boolean staff = isStaff(actor);
+        Participant p = staff ? null : findParticipantByContact(actor.getEmail());
+
+        if (p == null) {                                   // need to identify / create the participant from the form
+            String t = type == null ? "" : type.trim();
+            String n = name == null ? "" : name.trim();
+            String c = staff ? (contact == null ? "" : contact.trim()) : actor.getEmail();
+            String num = number == null ? "" : number.trim();
+            String x = extra == null ? "" : extra.trim();
+            String x2 = extra2 == null ? "" : extra2.trim();
+            if (!PARTICIPANT_STUDENT.equals(t) && !PARTICIPANT_FACULTY.equals(t) && !PARTICIPANT_OTHERS.equals(t))
+                throw new IllegalArgumentException("Choose a participant type.");
+            if (n.isEmpty()) throw new IllegalArgumentException("Participant name is required.");
+            if (c.isEmpty()) throw new IllegalArgumentException("BU/email address is required.");
+            if (c.matches(".*\\s+.*")) throw new IllegalArgumentException("BU/email address must not contain spaces.");
+            if (PARTICIPANT_STUDENT.equals(t)) {
+                if (num.isEmpty()) throw new IllegalArgumentException("Student number is required.");
+                if (x.isEmpty()) throw new IllegalArgumentException("Program is required.");
+            } else if (PARTICIPANT_FACULTY.equals(t)) {
+                if (num.isEmpty()) throw new IllegalArgumentException("Faculty ID is required.");
+                if (x.isEmpty()) throw new IllegalArgumentException("Department is required.");
+                if (x2.isEmpty()) throw new IllegalArgumentException("Position is required.");
+            } else if (x.isEmpty()) {
+                throw new IllegalArgumentException("Affiliation / company is required.");
+            }
+            if (staff) p = findParticipant(t, num, n);
+            if (p == null) {
+                switch (t) {
+                    case PARTICIPANT_STUDENT: p = new Student(n, c, num, x); break;
+                    case PARTICIPANT_FACULTY: p = new Faculty(n, c, num, x, x2); break;
+                    default:                  p = new Others(n, c, x); break;
+                }
+            }
+        }
+        return register(actor, p, event);
+    }
+
+    /**
+     * The registrations this account may see (see getVisibleRegistrations), narrowed to those whose
+     * participant name, event name, participant type or status contains the keyword.
+     * An empty keyword returns everything visible.
+     */
+    public List<Registration> searchVisibleRegistrations(UserAccount actor, String keyword) {
+        String k = keyword == null ? "" : keyword.trim().toLowerCase();
+        List<Registration> out = new ArrayList<>();
+        for (Registration r : getVisibleRegistrations(actor)) {
+            if (k.isEmpty()
+                    || r.getParticipant().getFullName().toLowerCase().contains(k)
+                    || r.getEvent().getEventName().toLowerCase().contains(k)
+                    || r.getParticipant().getClass().getSimpleName().toLowerCase().contains(k)
+                    || r.getStatus().toLowerCase().contains(k)) {
+                out.add(r);
+            }
+        }
+        return out;
     }
 
     /**
@@ -1304,6 +1562,16 @@ public class EventManager {
         return rows;
     }
 
+    /** Totals shown above the report table: registrations, attended, and the attendance rate in percent. */
+    public static ReportTotals summarizeReport(List<EventReportRow> rows) {
+        int registered = 0, attended = 0;
+        for (EventReportRow r : rows) {
+            registered += r.getTotalRegistration();
+            attended += r.getAttended();
+        }
+        return new ReportTotals(registered, attended, attendanceRate(attended, registered));
+    }
+
     /** Attendance rate in percent. Returns 0 when nobody is registered (no division by zero). */
     public static double attendanceRate(int attended, int registered) {
         return registered <= 0 ? 0.0 : (attended * 100.0) / registered;
@@ -1334,5 +1602,19 @@ public class EventManager {
             sb.append("---------------------------------------\n");
         }
         return sb.toString();
+    }
+
+    // =====================================================================
+    //  REMEMBER ME (username + role only, never the password)
+    // =====================================================================
+    /** {identifier, role} remembered from the last login, or null. */
+    public String[] getRememberedLogin() {
+        return LoginPreferences.load(store.getDirectory());
+    }
+
+    /** Remembers (remember = true) or forgets the account's username and role. Failures are ignored on purpose. */
+    public void rememberLogin(UserAccount account, boolean remember) {
+        if (remember && account != null) LoginPreferences.save(store.getDirectory(), account.getUsername(), account.getRole());
+        else LoginPreferences.clear(store.getDirectory());
     }
 }
