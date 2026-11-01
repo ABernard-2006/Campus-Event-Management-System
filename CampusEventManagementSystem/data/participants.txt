@@ -1,0 +1,2 @@
+# type|participantId|fullName|contact|STUDENT: number,program / FACULTY: number,department,position / OTHERS: affiliation
+STUDENT|1|bernard|bern@gmail.com|12|12|

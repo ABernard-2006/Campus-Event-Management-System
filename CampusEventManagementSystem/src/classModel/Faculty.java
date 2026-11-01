@@ -26,6 +26,16 @@ public class Faculty extends Participant {
     public String getPosition() { return position; }
 
     @Override
+    public boolean sharesIdentityWith(Participant other) {
+        return other instanceof Faculty && ((Faculty) other).facultyNumber.equalsIgnoreCase(facultyNumber);
+    }
+
+    @Override
+    public String getDuplicateIdentityMessage() {
+        return "Faculty ID " + facultyNumber + " is already registered in the system.";
+    }
+
+    @Override
     public String displayDetails() {
         return "[FACULTY] " + getFullName() + " | Dept: " + department + " | Pos: " + position;
     }

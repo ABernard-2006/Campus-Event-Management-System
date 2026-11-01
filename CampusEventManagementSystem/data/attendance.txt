@@ -1,0 +1,2 @@
+# attendanceId|registrationId|attended
+1|1|true

@@ -12,6 +12,9 @@ import classModel.Registration;
 import classModel.Student;
 import classModel.UserAccount;
 import com.system.service.EventManager;
+import com.system.service.AccessControl;
+import com.system.service.EventQueryService;
+import com.system.service.RegistrationService;
 import com.system.service.StorageException;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
@@ -31,13 +34,15 @@ import javax.swing.table.DefaultTableModel;
  *    history shows only their own registrations. They can cancel only their own.
  *  - Administrators and Organizers can register walk-in participants and cancel any registration.
  *
- * These rules are repeated inside EventManager, so they hold even if a button is changed here.
+ * These rules are repeated inside RegistrationService, so they hold even if a button is changed here.
  * The generated NetBeans code below is untouched; everything handwritten is above it.
  *
  * @author Dhustine
  */
 public class RegistrationPanel extends javax.swing.JPanel implements Refreshable {
-    private final EventManager manager;
+    private final AccessControl access;
+    private final EventQueryService eventQueries;
+    private final RegistrationService registrations;
     private final UserAccount actor;
     private final boolean staff;
     private final List<Event> eventChoices = new ArrayList<>();   // same order as the combo box items
@@ -54,9 +59,11 @@ public class RegistrationPanel extends javax.swing.JPanel implements Refreshable
     }
 
     public RegistrationPanel(EventManager manager, UserAccount actor) {
-        this.manager = manager;
+        this.access = manager == null ? null : manager.getAccessControl();
+        this.eventQueries = manager == null ? null : manager.getEventQueryService();
+        this.registrations = manager == null ? null : manager.getRegistrationService();
         this.actor = actor;
-        this.staff = manager != null && manager.isStaff(actor);
+        this.staff = access != null && access.isStaff(actor);
         initComponents();
         setupForm();
     }
@@ -109,8 +116,8 @@ public class RegistrationPanel extends javax.swing.JPanel implements Refreshable
 
         eventChoices.clear();
         cmbSelectEvent.removeAllItems();
-        if (manager == null) return;
-        List<Event> open = manager.getUpcomingEvents(0);      // events today or later, soonest first
+        if (registrations == null) return;
+        List<Event> open = eventQueries.getUpcomingEvents(0);      // events today or later, soonest first
         int select = open.isEmpty() ? -1 : 0;
         for (Event e : open) {
             if (e.getEventId() == keepId) select = eventChoices.size();
@@ -128,9 +135,9 @@ public class RegistrationPanel extends javax.swing.JPanel implements Refreshable
     /** Dynamic switching of the labels/fields for Student, Faculty and Others. */
     private void updateTypeFields() {
         String t = selectedType();
-        boolean student = t.equals(EventManager.PARTICIPANT_STUDENT);
-        boolean faculty = t.equals(EventManager.PARTICIPANT_FACULTY);
-        boolean others = t.equals(EventManager.PARTICIPANT_OTHERS);
+        boolean student = t.equals(RegistrationService.PARTICIPANT_STUDENT);
+        boolean faculty = t.equals(RegistrationService.PARTICIPANT_FACULTY);
+        boolean others = t.equals(RegistrationService.PARTICIPANT_OTHERS);
 
         lblRegNum.setText(student ? "Student Number:" : "Faculty ID:");
         lblRegNum.setVisible(!others);
@@ -143,14 +150,14 @@ public class RegistrationPanel extends javax.swing.JPanel implements Refreshable
 
     // ---------- Participant accounts: fixed to their own profile ----------
     private boolean hasLockedProfile() {
-        return !staff && manager != null && actor != null && manager.findParticipantByContact(actor.getEmail()) != null;
+        return !staff && registrations != null && actor != null && registrations.findParticipantByContact(actor.getEmail()) != null;
     }
 
     private void applyProfileMode() {
-        if (staff || manager == null || actor == null) return;
+        if (staff || registrations == null || actor == null) return;
         txtRegContact.setText(actor.getEmail());
         txtRegContact.setEditable(false);
-        Participant mine = manager.findParticipantByContact(actor.getEmail());
+        Participant mine = registrations.findParticipantByContact(actor.getEmail());
         boolean has = mine != null;
         if (has) fillFrom(mine);
         txtRegName.setEditable(!has);
@@ -196,8 +203,8 @@ public class RegistrationPanel extends javax.swing.JPanel implements Refreshable
     private void loadTable(String keyword) {
         tableModel.setRowCount(0);
         shown.clear();
-        if (manager == null) return;
-        for (Registration r : manager.searchVisibleRegistrations(actor, keyword)) {
+        if (registrations == null) return;
+        for (Registration r : registrations.searchVisibleRegistrations(actor, keyword)) {
             shown.add(r);
             tableModel.addRow(new Object[]{r.getRegistrationId(), r.getParticipant().getFullName(),
                 r.getEvent().getEventName(), r.getParticipant().getClass().getSimpleName(), r.getStatus()});
@@ -399,11 +406,11 @@ public class RegistrationPanel extends javax.swing.JPanel implements Refreshable
 
     /**
      * Register. Flow: read the form -> immediate checks (nothing chosen / fields empty, focus on the field)
-     * -> EventManager.registerForEvent (who is registered, field rules, permission, duplicate, capacity
+     * -> RegistrationService.registerForEvent (who is registered, field rules, permission, duplicate, capacity
      * and "event already over" rules, saving) -> show the result and refresh.
      */
     private void btnRegisterActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRegisterActionPerformed
-        if (manager == null) { warn("No EventManager connected to this panel.", "Invalid or Missing Input"); return; }
+        if (registrations == null) { warn("No EventManager connected to this panel.", "Invalid or Missing Input"); return; }
 
         int idx = cmbSelectEvent.getSelectedIndex();
         if (idx < 0 || idx >= eventChoices.size()) {
@@ -425,10 +432,10 @@ public class RegistrationPanel extends javax.swing.JPanel implements Refreshable
             if (type.isEmpty()) { warn("Choose a participant type.", "Invalid or Missing Input"); cmbParticipantType.requestFocusInWindow(); return; }
             if (name.isEmpty()) { warn("Participant name is required.", "Invalid or Missing Input"); txtRegName.requestFocusInWindow(); return; }
             if (contact.isEmpty()) { warn("BU/email address is required.", "Invalid or Missing Input"); txtRegContact.requestFocusInWindow(); return; }
-            if (type.equals(EventManager.PARTICIPANT_STUDENT)) {
+            if (type.equals(RegistrationService.PARTICIPANT_STUDENT)) {
                 if (number.isEmpty()) { warn("Student number is required.", "Invalid or Missing Input"); txtRegNum.requestFocusInWindow(); return; }
                 if (extra.isEmpty()) { warn("Program is required.", "Invalid or Missing Input"); txtRegExtra.requestFocusInWindow(); return; }
-            } else if (type.equals(EventManager.PARTICIPANT_FACULTY)) {
+            } else if (type.equals(RegistrationService.PARTICIPANT_FACULTY)) {
                 if (number.isEmpty()) { warn("Faculty ID is required.", "Invalid or Missing Input"); txtRegNum.requestFocusInWindow(); return; }
                 if (extra.isEmpty()) { warn("Department is required.", "Invalid or Missing Input"); txtRegExtra.requestFocusInWindow(); return; }
                 if (extra2.isEmpty()) { warn("Position is required.", "Invalid or Missing Input"); txtRegExtra2.requestFocusInWindow(); return; }
@@ -441,7 +448,7 @@ public class RegistrationPanel extends javax.swing.JPanel implements Refreshable
 
         // ---- delegate to the service, then show its result ----
         try {
-            Registration r = manager.registerForEvent(actor, event, type, name, contact, number, extra, extra2);
+            Registration r = registrations.registerForEvent(actor, event, type, name, contact, number, extra, extra2);
             JOptionPane.showMessageDialog(this, r.getParticipant().getFullName() + " is registered for "
                     + event.getEventName() + ".\nRegistration ID: " + r.getRegistrationId());
             if (staff) clearForm();
@@ -492,7 +499,7 @@ public class RegistrationPanel extends javax.swing.JPanel implements Refreshable
                 "Cancel registration", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         if (choice != JOptionPane.YES_OPTION) return;
         try {
-            manager.cancelRegistration(actor, r);          // ownership/staff rule, state rule and saving are in the service
+            registrations.cancelRegistration(actor, r);          // ownership/staff rule, state rule and saving are in the service
             refresh();
         } catch (SecurityException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Not allowed", JOptionPane.WARNING_MESSAGE);

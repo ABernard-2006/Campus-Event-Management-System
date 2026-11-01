@@ -3,6 +3,7 @@ package com.system.gui;
 import classModel.OrganizerKey;
 import classModel.UserAccount;
 import com.system.service.EventManager;
+import com.system.service.OrganizerKeyService;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -31,7 +32,8 @@ import javax.swing.table.DefaultTableModel;
 public class OrganizerKeysDialog extends JDialog {
     private static final DateTimeFormatter SHOWN = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-    private final EventManager manager;
+    private final EventManager manager;                       // given on to the Generate dialog
+    private final OrganizerKeyService keyService;
     private final UserAccount actor;
 
     private final DefaultTableModel model = new DefaultTableModel(
@@ -57,8 +59,9 @@ public class OrganizerKeysDialog extends JDialog {
     public OrganizerKeysDialog(Frame owner, EventManager manager, UserAccount actor) {
         super(owner, "Organizer Invitation Keys", true);
         this.manager = manager;
+        this.keyService = manager.getOrganizerKeyService();
         this.actor = actor;
-        manager.getOrganizerKeys(actor);        // throws SecurityException at once if 'actor' is not an administrator
+        keyService.getOrganizerKeys(actor);        // throws SecurityException at once if 'actor' is not an administrator
         buildUi();
         refresh();
         pack();
@@ -105,7 +108,7 @@ public class OrganizerKeysDialog extends JDialog {
     private void refresh() {
         model.setRowCount(0);
         LocalDateTime now = LocalDateTime.now();
-        shownKeys = new java.util.ArrayList<>(manager.getOrganizerKeys(actor));
+        shownKeys = new java.util.ArrayList<>(keyService.getOrganizerKeys(actor));
         for (OrganizerKey k : shownKeys) {
             model.addRow(new Object[] {
                 k.getKeyId(),
@@ -142,7 +145,7 @@ public class OrganizerKeysDialog extends JDialog {
                 "Revoke Key", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
         if (answer != JOptionPane.YES_OPTION) return;
         try {
-            manager.revokeOrganizerKey(actor, keyId);
+            keyService.revokeOrganizerKey(actor, keyId);
         } catch (SecurityException | IllegalArgumentException | IllegalStateException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Revoke Key", JOptionPane.WARNING_MESSAGE);
         }

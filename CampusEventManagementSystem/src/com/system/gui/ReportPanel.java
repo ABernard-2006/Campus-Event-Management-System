@@ -7,6 +7,9 @@ package com.system.gui;
 import classModel.Event;
 import classModel.UserAccount;
 import com.system.service.EventManager;
+import com.system.service.EventQueryService;
+import com.system.service.EventService;
+import com.system.service.ReportService;
 import com.system.service.EventReportRow;
 import com.system.service.ReportTotals;
 import java.time.LocalDate;
@@ -27,7 +30,7 @@ import javax.swing.table.DefaultTableModel;
  *  - Total Registration = valid (not cancelled) registrations of the event
  *  - Attended           = valid registrations marked present
  *  - Student/Faculty/Others = valid registrations by participant category
- * Every number comes from EventManager.buildReport(...), which counts the real Registration,
+ * Every number comes from ReportService.buildReport(...), which counts the real Registration,
  * Participant and Attendance objects. Double-click a row to see the event's own
  * displayDetails() text (each Event subclass describes itself differently = polymorphism).
  *
@@ -39,7 +42,8 @@ public class ReportPanel extends javax.swing.JPanel implements Refreshable {
     private static final String ALL_EVENTS = "All Events";
     private static final String ALL_TYPES = "All Types";
 
-    private final EventManager manager;
+    private final ReportService reports;
+    private final EventQueryService eventQueries;
     private final UserAccount actor;
     private final List<Event> eventChoices = new ArrayList<>();   // index i  <->  combo item i + 1 (item 0 = all)
     private final List<EventReportRow> rows = new ArrayList<>();  // same order as the table rows
@@ -58,7 +62,8 @@ public class ReportPanel extends javax.swing.JPanel implements Refreshable {
     }
 
     public ReportPanel(EventManager manager, UserAccount actor) {
-        this.manager = manager;
+        this.reports = manager == null ? null : manager.getReportService();
+        this.eventQueries = manager == null ? null : manager.getEventQueryService();
         this.actor = actor;
         initComponents();
         setupReport();
@@ -73,7 +78,7 @@ public class ReportPanel extends javax.swing.JPanel implements Refreshable {
         spinMaxDateRange.setEditor(new JSpinner.DateEditor(spinMaxDateRange, "yyyy-MM-dd"));
 
         cmbReportType.setModel(new javax.swing.DefaultComboBoxModel<>(
-                new String[]{ALL_TYPES, EventManager.TYPE_WORKSHOP, EventManager.TYPE_SEMINAR}));
+                new String[]{ALL_TYPES, EventService.TYPE_WORKSHOP, EventService.TYPE_SEMINAR}));
 
         // The Generate button, both combo boxes and both date spinners are wired by the form
         // (btnGanerateReportActionPerformed, cmbSelectEventsActionPerformed, cmbReportTypeActionPerformed,
@@ -98,7 +103,7 @@ public class ReportPanel extends javax.swing.JPanel implements Refreshable {
     /** Re-reads the events: rebuilds the event list, widens the date range if needed, and redraws the table. */
     @Override
     public void refresh() {
-        if (manager == null) return;
+        if (reports == null) return;
         updating = true;
         try {
             int keepId = -1;
@@ -108,7 +113,7 @@ public class ReportPanel extends javax.swing.JPanel implements Refreshable {
             eventChoices.clear();
             cmbSelectEvents.removeAllItems();
             cmbSelectEvents.addItem(ALL_EVENTS);
-            List<Event> sorted = manager.getEventsChronological();
+            List<Event> sorted = eventQueries.getEventsChronological();
             int select = 0;
             for (Event e : sorted) {
                 if (e.getEventId() == keepId) select = eventChoices.size() + 1;
@@ -118,7 +123,7 @@ public class ReportPanel extends javax.swing.JPanel implements Refreshable {
             cmbSelectEvents.setSelectedIndex(select);
 
             if (!dateRangeEditedByUser) {            // until the user picks dates, the range covers every event
-                LocalDate[] range = manager.getEventDateRange();      // {earliest, latest} event date
+                LocalDate[] range = eventQueries.getEventDateRange();      // {earliest, latest} event date
                 spinMinDateRange.setValue(toDate(range[0]));
                 spinMaxDateRange.setValue(toDate(range[1]));
             }
@@ -130,7 +135,7 @@ public class ReportPanel extends javax.swing.JPanel implements Refreshable {
 
     /** Builds the table and the three summary tiles from the CURRENT filter settings. */
     private void generate() {
-        if (manager == null || updating) return;
+        if (reports == null || updating) return;
         tableModel.setRowCount(0);
         rows.clear();
         try {
@@ -140,12 +145,12 @@ public class ReportPanel extends javax.swing.JPanel implements Refreshable {
             LocalDate from = toLocalDate(spinMinDateRange.getValue());
             LocalDate to = toLocalDate(spinMaxDateRange.getValue());
 
-            rows.addAll(manager.buildReport(actor, type, only, from, to));
+            rows.addAll(reports.buildReport(actor, type, only, from, to));
             for (EventReportRow r : rows) {
                 tableModel.addRow(new Object[]{r.getEventName(), r.getTotalRegistration(), r.getAttended(),
                     r.getStudents(), r.getFaculty(), r.getOthers()});
             }
-            ReportTotals totals = EventManager.summarizeReport(rows);      // the numbers come from the service
+            ReportTotals totals = ReportService.summarizeReport(rows);      // the numbers come from the service
             lblTotalRegNum.setText(String.valueOf(totals.getTotalRegistrations()));
             lblTotalAttendNum.setText(String.valueOf(totals.getTotalAttended()));
             lblTotalAttendRateNum.setText(String.format("%.1f%%", totals.getAttendanceRatePercent()));
@@ -167,7 +172,7 @@ public class ReportPanel extends javax.swing.JPanel implements Refreshable {
         int row = reportTable.convertRowIndexToModel(viewRow);
         if (row < 0 || row >= rows.size()) return;
         try {
-            JTextArea text = new JTextArea(manager.describeEvent(actor, rows.get(row).getEvent()), 12, 40);
+            JTextArea text = new JTextArea(reports.describeEvent(actor, rows.get(row).getEvent()), 12, 40);
             text.setEditable(false);
             text.setFont(new java.awt.Font(java.awt.Font.MONOSPACED, java.awt.Font.PLAIN, 12));
             JOptionPane.showMessageDialog(this, new JScrollPane(text), "Event details", JOptionPane.PLAIN_MESSAGE);
