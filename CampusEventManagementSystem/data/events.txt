@@ -1,0 +1,2 @@
+# type|eventId|name|date|startTime|venueId|WORKSHOP: topic,materials,speaker / SEMINAR: speaker,subject,(blank)|durationMinutes
+SEMINAR|1|OOP Defense|2026-11-01|14:39|3|Jullue|HUn||60

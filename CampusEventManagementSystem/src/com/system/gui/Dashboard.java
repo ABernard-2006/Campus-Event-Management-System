@@ -7,6 +7,9 @@ package com.system.gui;
 import classModel.Event;
 import classModel.UserAccount;
 import com.system.service.EventManager;
+import com.system.service.AccessControl;
+import com.system.service.ChangeNotifier;
+import com.system.service.EventQueryService;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.CardLayout;
@@ -47,7 +50,10 @@ public class Dashboard extends javax.swing.JFrame {
 
     private static final DateTimeFormatter TITLE_DATE = DateTimeFormatter.ofPattern("MMM d, yyyy");
 
-    private final EventManager manager;     // the one shared service object for the whole app
+    private final EventManager manager;     // the one shared service registry (given on to child screens)
+    private final AccessControl access;
+    private final EventQueryService eventQueries;
+    private final ChangeNotifier changes;
     private UserAccount account;            // the logged-in user; set to null again on logout
 
     private final CardLayout cardLayout = new CardLayout();
@@ -65,12 +71,15 @@ public class Dashboard extends javax.swing.JFrame {
     // ---------- Constructor ----------
     /**
      * @param manager the shared EventManager (the same one the login screen used)
-     * @param account the authenticated account returned by EventManager.authenticate(...)
+     * @param account the authenticated account returned by AuthenticationService.authenticate(...)
      */
     public Dashboard(EventManager manager, UserAccount account) {
         if (manager == null) throw new IllegalArgumentException("A Dashboard needs an EventManager.");
         if (account == null) throw new IllegalArgumentException("A Dashboard needs a logged-in account.");
         this.manager = manager;
+        this.access = manager.getAccessControl();
+        this.eventQueries = manager.getEventQueryService();
+        this.changes = manager.getChangeNotifier();
         this.account = account;
         initComponents();       // NetBeans-generated form: do not edit
         buildContentArea();     // header + switchable screens around the existing form
@@ -78,16 +87,16 @@ public class Dashboard extends javax.swing.JFrame {
         buildProfileHeader();
         buildHomeWidgets();
         refreshHome();
-        manager.addChangeListener(dataListener);
+        changes.addListener(dataListener);
         showCard(CARD_HOME);
         pack();                 // the profile header added extra height, so size the window again
         setLocationRelativeTo(null);
     }
 
     // ---------- Role rules: the service decides, the Dashboard only shows or hides buttons ----------
-    private boolean canManageEvents() { return manager.canManageEvents(account); }
-    private boolean canViewReports()  { return manager.canViewReports(account); }
-    private boolean canManageKeys()   { return manager.canManageOrganizerKeys(account); }
+    private boolean canManageEvents() { return access.canManageEvents(account); }
+    private boolean canViewReports()  { return access.canViewReports(account); }
+    private boolean canManageKeys()   { return access.canManageOrganizerKeys(account); }
 
     // ---------- Layout: wrap the form's centre panel so other screens can replace it ----------
     private void buildContentArea() {
@@ -175,7 +184,7 @@ public class Dashboard extends javax.swing.JFrame {
     }
 
     /**
-     * Called by EventManager after any saved change. Redraws everything that shows event data:
+     * Called by the ChangeNotifier after any saved change. Redraws everything that shows event data:
      * the calendar, upcoming list, event cards, and every management/registration/report screen.
      */
     private void onDataChanged() {
@@ -242,7 +251,7 @@ public class Dashboard extends javax.swing.JFrame {
 
     /** Re-reads the events from the manager and updates the calendar and the upcoming list. */
     private void refreshHome() {
-        List<Event> upcoming = manager.getUpcomingEvents(3);
+        List<Event> upcoming = eventQueries.getUpcomingEvents(3);
         List<String> names = new ArrayList<>();
         List<LocalDate> dates = new ArrayList<>();
         for (Event e : upcoming) {
@@ -251,14 +260,14 @@ public class Dashboard extends javax.swing.JFrame {
         }
         upcomingEventsPanel1.setEvents(names, dates);
 
-        calendarPanel1.setEventDates(manager.getEventDates());
+        calendarPanel1.setEventDates(eventQueries.getEventDates());
     }
 
     /** Home / Events / View all: every event, no filter. */
     private void showAllEvents(boolean asEventsView) {
         txtSearch.setText("");
         refreshHome();
-        showEventCards(() -> manager.getAllEvents(), asEventsView ? "All Events" : "Dashboard",
+        showEventCards(() -> eventQueries.getAllEvents(), asEventsView ? "All Events" : "Dashboard",
                 "No events have been created yet.");
         cardLayout.show(contentCards, CARD_HOME);
     }
@@ -269,13 +278,13 @@ public class Dashboard extends javax.swing.JFrame {
             showAllEvents(false);
             return;
         }
-        showEventCards(() -> manager.searchEvent(keyword), "Search: " + keyword,
+        showEventCards(() -> eventQueries.searchEvent(keyword), "Search: " + keyword,
                 "No events match \"" + keyword + "\".");
     }
 
     private void showEventsOn(LocalDate date) {
         txtSearch.setText("");
-        showEventCards(() -> manager.getEventsOn(date), "Events on " + date.format(TITLE_DATE),
+        showEventCards(() -> eventQueries.getEventsOn(date), "Events on " + date.format(TITLE_DATE),
                 "No events on " + date.format(TITLE_DATE) + ".");
     }
 
@@ -300,7 +309,7 @@ public class Dashboard extends javax.swing.JFrame {
             none.setAlignmentX(Component.LEFT_ALIGNMENT);
             eventsContainer.add(none);
         }
-        for (Event e : EventManager.orderForDisplay(events)) {
+        for (Event e : EventQueryService.orderForDisplay(events)) {
             EventCardPanel card = new EventCardPanel();
             card.setEvent(e);
             card.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -315,7 +324,7 @@ public class Dashboard extends javax.swing.JFrame {
 
     // ---------- Organizer keys (administrators only) ----------
     private void openOrganizerKeys() {
-        // The dialog and EventManager both re-check the role, so a non-admin only ever gets a message.
+        // The dialog and OrganizerKeyService both re-check the role, so a non-admin only ever gets a message.
         OrganizerKeysDialog.open(this, manager, account);
     }
 
@@ -325,7 +334,7 @@ public class Dashboard extends javax.swing.JFrame {
                 JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         if (choice != JOptionPane.YES_OPTION) return;
         account = null;                         // forget who was logged in
-        manager.removeChangeListener(dataListener);
+        changes.removeListener(dataListener);
         LoginFrame login = new LoginFrame(manager);
         login.setLocationRelativeTo(null);
         login.setVisible(true);
@@ -340,6 +349,9 @@ public class Dashboard extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
+        searchBarPanel1 = new com.system.gui.SearchBarPanel();
+        searchBarPanel2 = new com.system.gui.SearchBarPanel();
+        searchBarPanel3 = new com.system.gui.SearchBarPanel();
         pnlRoot = new javax.swing.JPanel();
         pnlSide = new javax.swing.JPanel();
         jPanel1 = new javax.swing.JPanel();
@@ -561,6 +573,9 @@ public class Dashboard extends javax.swing.JFrame {
     private javax.swing.JPanel pnlCenter;
     private javax.swing.JPanel pnlRoot;
     private javax.swing.JPanel pnlSide;
+    private com.system.gui.SearchBarPanel searchBarPanel1;
+    private com.system.gui.SearchBarPanel searchBarPanel2;
+    private com.system.gui.SearchBarPanel searchBarPanel3;
     private javax.swing.JTextField txtSearch;
     private com.system.gui.UpcomingEventsPanel upcomingEventsPanel1;
     // End of variables declaration//GEN-END:variables

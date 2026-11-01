@@ -3,6 +3,9 @@ package com.system.gui;
 import classModel.Event;
 import classModel.UserAccount;
 import com.system.service.EventManager;
+import com.system.service.EventQueryService;
+import com.system.service.EventService;
+import com.system.service.RegistrationService;
 import com.system.service.StorageException;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
@@ -21,14 +24,16 @@ import javax.swing.table.DefaultTableModel;
 
 /**
  * Lists every saved event so an Administrator or Organizer can edit or delete one.
- * Handwritten (no .form file). All changes go through the shared EventManager,
+ * Handwritten (no .form file). All changes go through the shared EventService,
  * which checks the permission again.
  */
 public class EventListPanel extends JPanel implements Refreshable {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("hh:mm a");
 
-    private final EventManager manager;
+    private final EventQueryService eventQueries;
+    private final RegistrationService registrations;
+    private final EventService eventService;
     private final UserAccount actor;
     private final Consumer<Event> editHandler;
     private final DefaultTableModel model = new DefaultTableModel(new Object[][]{},
@@ -45,7 +50,9 @@ public class EventListPanel extends JPanel implements Refreshable {
     private List<Event> shown = new java.util.ArrayList<>();      // same order as the table rows
 
     public EventListPanel(EventManager manager, UserAccount actor, Consumer<Event> editHandler) {
-        this.manager = manager;
+        this.eventQueries = manager.getEventQueryService();
+        this.registrations = manager.getRegistrationService();
+        this.eventService = manager.getEventService();
         this.actor = actor;
         this.editHandler = editHandler;
         build();
@@ -121,12 +128,12 @@ public class EventListPanel extends JPanel implements Refreshable {
         int row = table.getSelectedRow();
         if (row >= 0 && row < shown.size()) selectedId = shown.get(row).getEventId();
 
-        shown = manager.searchEventsChronological(txtSearch.getText());
+        shown = eventQueries.searchEventsChronological(txtSearch.getText());
         model.setRowCount(0);
         for (Event e : shown) {
             model.addRow(new Object[]{e.getEventId(), e.getEventName(), e.getEventType(),
                 e.getDate().format(DATE_FMT), e.getTimeRangeText(), e.getDurationText(),
-                e.getVenue().getVenueName(), e.getVenue().getCapacity(), manager.countActive(e),
+                e.getVenue().getVenueName(), e.getVenue().getCapacity(), registrations.countActive(e),
                 e.getSpeakerNames()});
         }
         lblCount.setText(shown.size() + " event(s)");
@@ -155,7 +162,7 @@ public class EventListPanel extends JPanel implements Refreshable {
         if (e == null) return;
         int regs;
         try {
-            regs = manager.getRegistrationsFor(actor, e).size();
+            regs = registrations.getRegistrationsFor(actor, e).size();
         } catch (SecurityException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Not allowed", JOptionPane.WARNING_MESSAGE);
             return;
@@ -168,7 +175,7 @@ public class EventListPanel extends JPanel implements Refreshable {
                 JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
         if (choice != JOptionPane.YES_OPTION) return;
         try {
-            manager.deleteEvent(actor, e);
+            eventService.deleteEvent(actor, e);
             JOptionPane.showMessageDialog(this, "Deleted: " + e.getEventName());
         } catch (SecurityException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Not allowed", JOptionPane.WARNING_MESSAGE);

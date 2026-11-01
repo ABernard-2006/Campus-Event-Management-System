@@ -4,7 +4,7 @@ import classModel.Event;
 
 /**
  * One line of the Reports table. It is a read-only snapshot of the numbers for one event,
- * produced by EventManager.buildReport(...) from the real Registration and Attendance objects.
+ * produced by ReportService.buildReport(...) from the real Registration and Attendance objects.
  */
 public class EventReportRow {
     private final Event event;

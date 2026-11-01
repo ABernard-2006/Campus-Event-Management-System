@@ -10,6 +10,7 @@ package com.system.gui;
  */
 import classModel.UserAccount;
 import com.system.service.EventManager;
+import com.system.service.AuthenticationService;
 import java.util.Arrays;
 
 public class LoginFrame extends javax.swing.JFrame {
@@ -19,7 +20,8 @@ public class LoginFrame extends javax.swing.JFrame {
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final int LOCKOUT_SECONDS = 15;
 
-    private final EventManager manager;
+    private final EventManager manager;                       // given on to the sign-up window and the dashboard
+    private final AuthenticationService authentication;
     private int failedAttempts = 0;
 
     /**
@@ -33,6 +35,7 @@ public class LoginFrame extends javax.swing.JFrame {
     public LoginFrame(EventManager manager) 
     {
         this.manager = manager;
+        this.authentication = manager.getAuthenticationService();
         initComponents();
         getContentPane().setBackground(new java.awt.Color(245, 245, 247));
         setUpLogin();
@@ -60,7 +63,7 @@ public class LoginFrame extends javax.swing.JFrame {
         });
 
         // Remember me: bring back the saved username and role (never a password)
-        String[] remembered = manager.getRememberedLogin();
+        String[] remembered = authentication.getRememberedLogin();
         if (remembered != null) {
             txtEmail.setText(remembered[0]);
             if (!remembered[1].isEmpty()) cmdParticipants.setSelectedItem(remembered[1]);
@@ -234,13 +237,13 @@ public class LoginFrame extends javax.swing.JFrame {
             }
 
             // ---- delegate authentication to the service, then handle its result ----
-            UserAccount account = manager.authenticate(identifier, new String(typedPassword), role);
+            UserAccount account = authentication.authenticate(identifier, new String(typedPassword), role);
             if (account == null) {
                 handleFailedLogin();
                 return;
             }
             failedAttempts = 0;
-            manager.rememberLogin(account, checkRemember.isSelected());     // saves or forgets username + role only
+            authentication.rememberLogin(account, checkRemember.isSelected());     // saves or forgets username + role only
             openDashboard(account);
         } catch (IllegalArgumentException | IllegalStateException ex) {
             // empty fields, no accounts yet, or a storage problem

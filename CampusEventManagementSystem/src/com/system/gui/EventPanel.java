@@ -8,6 +8,9 @@ import classModel.Event;
 import classModel.UserAccount;
 import classModel.Venue;
 import com.system.service.EventManager;
+import com.system.service.EventQueryService;
+import com.system.service.EventService;
+import com.system.service.VenueService;
 import com.system.service.StorageException;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -27,8 +30,10 @@ import javax.swing.JSpinner;
  * @author Dhustine
  */
 public class EventPanel extends javax.swing.JPanel implements Refreshable {
-    private final EventManager manager;
-    private final UserAccount actor;                       // who is using the panel (checked again inside EventManager)
+    private final EventService eventService;
+    private final VenueService venueService;
+    private final EventQueryService eventQueries;
+    private final UserAccount actor;                       // who is using the panel (checked again inside EventService)
     private final DefaultListModel<String> speakerModel = new DefaultListModel<>();
     private final JList<String> lstSpeakers = new JList<>(speakerModel);
     private Event editing;                                 // null = creating a new event
@@ -40,7 +45,9 @@ public class EventPanel extends javax.swing.JPanel implements Refreshable {
     }
 
     public EventPanel(EventManager manager, UserAccount actor) {
-        this.manager = manager;
+        this.eventService = manager == null ? null : manager.getEventService();
+        this.venueService = manager == null ? null : manager.getVenueService();
+        this.eventQueries = manager == null ? null : manager.getEventQueryService();
         this.actor = actor;
         initComponents();
         setupForm();
@@ -71,7 +78,7 @@ public class EventPanel extends javax.swing.JPanel implements Refreshable {
 
     /** Dynamic switching: Workshop shows Topic + Materials, Seminar shows Subject only. */
     private void updateTypeFields() {
-        boolean workshop = selectedType().equals(EventManager.TYPE_WORKSHOP);
+        boolean workshop = selectedType().equals(EventService.TYPE_WORKSHOP);
         lblEventTopic.setText(workshop ? "Topic:" : "Subject:");
         lblEventMaterials.setVisible(workshop);
         txtEventMaterials.setVisible(workshop);
@@ -79,8 +86,8 @@ public class EventPanel extends javax.swing.JPanel implements Refreshable {
 
     /** When the typed venue already exists, fill in its capacity so the two cannot disagree. */
     private void suggestCapacity() {
-        if (manager == null || !txtMaxEventCap.getText().trim().isEmpty()) return;
-        Venue known = manager.findVenueByName(txtEventVenue.getText());
+        if (eventService == null || !txtMaxEventCap.getText().trim().isEmpty()) return;
+        Venue known = venueService.findVenueByName(txtEventVenue.getText());
         if (known != null) txtMaxEventCap.setText(String.valueOf(known.getCapacity()));
     }
 
@@ -135,7 +142,7 @@ public class EventPanel extends javax.swing.JPanel implements Refreshable {
     /** If the event being edited was deleted meanwhile, leave edit mode. */
     @Override
     public void refresh() {
-        if (editing != null && manager != null && manager.findEventById(editing.getEventId()) == null) exitEditMode();
+        if (editing != null && eventService != null && eventQueries.findEventById(editing.getEventId()) == null) exitEditMode();
     }
 
     // ---------- input parsing (GUI-level) ----------
@@ -441,17 +448,17 @@ public class EventPanel extends javax.swing.JPanel implements Refreshable {
      * date, capacity, venue and schedule-conflict rules) -> show the result.
      */
     private void btnCerateEventActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCerateEventActionPerformed
-        if (manager == null) { showError("No EventManager connected to this panel."); return; }
+        if (eventService == null) { showError("No EventManager connected to this panel."); return; }
 
         String type = selectedType();
         String eventName = txtEventName.getText().trim();
         String venueName = txtEventVenue.getText().trim();
         String topic = txtEventTopic.getText().trim();
         String materials = txtEventMaterials.getText().trim();
-        boolean workshop = type.equals(EventManager.TYPE_WORKSHOP);
+        boolean workshop = type.equals(EventService.TYPE_WORKSHOP);
 
         // ---- immediate input validation (empty / malformed) ----
-        if (!workshop && !type.equals(EventManager.TYPE_SEMINAR)) {
+        if (!workshop && !type.equals(EventService.TYPE_SEMINAR)) {
             showError("Choose an event type (Workshop or Seminar).");
             cmbEventType.requestFocusInWindow();
             return;
@@ -501,13 +508,13 @@ public class EventPanel extends javax.swing.JPanel implements Refreshable {
         try {
             String doneMessage;
             if (editing == null) {
-                Event created = manager.createEvent(actor, type, eventName, date, time, durationMinutes,
+                Event created = eventService.createEvent(actor, type, eventName, date, time, durationMinutes,
                         venueName, capacity, speakers, topic, materials);
                 doneMessage = "Created: " + created.getEventName() + "\nRuns " + created.getTimeRangeText()
                         + " (" + created.getDurationText() + ")";
                 clearForm();
             } else {
-                manager.updateEvent(actor, editing, eventName, date, time, durationMinutes,
+                eventService.updateEvent(actor, editing, eventName, date, time, durationMinutes,
                         venueName, capacity, speakers, topic, materials);
                 doneMessage = "Saved changes to: " + editing.getEventName() + "\nRuns " + editing.getTimeRangeText()
                         + " (" + editing.getDurationText() + ")";
