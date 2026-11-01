@@ -10,9 +10,7 @@ package com.system.gui;
  */
 import classModel.UserAccount;
 import com.system.service.EventManager;
-import com.system.service.LoginPreferences;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import com.system.service.AuthenticationService;
 import java.util.Arrays;
 
 public class LoginFrame extends javax.swing.JFrame {
@@ -22,7 +20,8 @@ public class LoginFrame extends javax.swing.JFrame {
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final int LOCKOUT_SECONDS = 15;
 
-    private final EventManager manager;
+    private final EventManager manager;                       // given on to the sign-up window and the dashboard
+    private final AuthenticationService authentication;
     private int failedAttempts = 0;
 
     /**
@@ -36,6 +35,7 @@ public class LoginFrame extends javax.swing.JFrame {
     public LoginFrame(EventManager manager) 
     {
         this.manager = manager;
+        this.authentication = manager.getAuthenticationService();
         initComponents();
         getContentPane().setBackground(new java.awt.Color(245, 245, 247));
         setUpLogin();
@@ -63,17 +63,13 @@ public class LoginFrame extends javax.swing.JFrame {
         });
 
         // Remember me: bring back the saved username and role (never a password)
-        String[] remembered = LoginPreferences.load(dataDirectory());
+        String[] remembered = authentication.getRememberedLogin();
         if (remembered != null) {
             txtEmail.setText(remembered[0]);
             if (!remembered[1].isEmpty()) cmdParticipants.setSelectedItem(remembered[1]);
             checkRemember.setSelected(true);
             javax.swing.SwingUtilities.invokeLater(() -> txtPassword.requestFocusInWindow());
         }
-    }
-
-    private Path dataDirectory() {
-        return Paths.get(manager.getDataDirectory());
     }
 
     // ------------------------------------------------------------------
@@ -223,17 +219,31 @@ public class LoginFrame extends javax.swing.JFrame {
         char[] typedPassword = txtPassword.getPassword();
         String role = (String) cmdParticipants.getSelectedItem();
         try {
-            UserAccount account = manager.authenticate(identifier, new String(typedPassword), role);
+            // ---- immediate input validation (the service repeats these checks) ----
+            if (identifier.isEmpty()) {
+                javax.swing.JOptionPane.showMessageDialog(this, "Enter your username or email.", "Login", javax.swing.JOptionPane.WARNING_MESSAGE);
+                txtEmail.requestFocusInWindow();
+                return;
+            }
+            if (typedPassword.length == 0) {
+                javax.swing.JOptionPane.showMessageDialog(this, "Enter your password.", "Login", javax.swing.JOptionPane.WARNING_MESSAGE);
+                txtPassword.requestFocusInWindow();
+                return;
+            }
+            if (role == null || role.trim().isEmpty()) {
+                javax.swing.JOptionPane.showMessageDialog(this, "Select the role you are logging in as.", "Login", javax.swing.JOptionPane.WARNING_MESSAGE);
+                cmdParticipants.requestFocusInWindow();
+                return;
+            }
+
+            // ---- delegate authentication to the service, then handle its result ----
+            UserAccount account = authentication.authenticate(identifier, new String(typedPassword), role);
             if (account == null) {
                 handleFailedLogin();
                 return;
             }
             failedAttempts = 0;
-            if (checkRemember.isSelected()) {
-                LoginPreferences.save(dataDirectory(), account.getUsername(), account.getRole());
-            } else {
-                LoginPreferences.clear(dataDirectory());
-            }
+            authentication.rememberLogin(account, checkRemember.isSelected());     // saves or forgets username + role only
             openDashboard(account);
         } catch (IllegalArgumentException | IllegalStateException ex) {
             // empty fields, no accounts yet, or a storage problem

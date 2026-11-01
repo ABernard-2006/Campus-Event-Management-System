@@ -13,7 +13,7 @@ import java.util.Base64;
  * The secret key itself is NEVER stored: only a SHA-256 hash of it is kept. The readable key
  * exists only at the moment an administrator generates it. This class is immutable: "changing"
  * a key (marking it used or revoked) returns a new OrganizerKey, so screens can never
- * alter a key without going through EventManager.
+ * alter a key without going through OrganizerKeyService.
  */
 public final class OrganizerKey {
     public static final String STATUS_UNUSED = "UNUSED";

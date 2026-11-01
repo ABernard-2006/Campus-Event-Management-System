@@ -167,6 +167,9 @@
           <StringArray count="0"/>
         </Property>
       </Properties>
+      <Events>
+        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="cmbSelectEventsActionPerformed"/>
+      </Events>
       <AuxValues>
         <AuxValue name="JavaCodeGenerator_TypeParameters" type="java.lang.String" value="&lt;String&gt;"/>
       </AuxValues>
@@ -177,6 +180,9 @@
           <StringArray count="0"/>
         </Property>
       </Properties>
+      <Events>
+        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="cmbReportTypeActionPerformed"/>
+      </Events>
       <AuxValues>
         <AuxValue name="JavaCodeGenerator_TypeParameters" type="java.lang.String" value="&lt;String&gt;"/>
       </AuxValues>
@@ -185,6 +191,9 @@
       <Properties>
         <Property name="text" type="java.lang.String" value="Generate Report"/>
       </Properties>
+      <Events>
+        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btnGanerateReportActionPerformed"/>
+      </Events>
     </Component>
     <Component class="javax.swing.JSpinner" name="spinMinDateRange">
       <Properties>
@@ -192,6 +201,9 @@
           <SpinnerModel initial="now" stepSize="5" type="date"/>
         </Property>
       </Properties>
+      <Events>
+        <EventHandler event="stateChanged" listener="javax.swing.event.ChangeListener" parameters="javax.swing.event.ChangeEvent" handler="spinMinDateRangeStateChanged"/>
+      </Events>
     </Component>
     <Component class="javax.swing.JSpinner" name="spinMaxDateRange">
       <Properties>
@@ -199,6 +211,9 @@
           <SpinnerModel initial="now" stepSize="5" type="date"/>
         </Property>
       </Properties>
+      <Events>
+        <EventHandler event="stateChanged" listener="javax.swing.event.ChangeListener" parameters="javax.swing.event.ChangeEvent" handler="spinMaxDateRangeStateChanged"/>
+      </Events>
     </Component>
     <Component class="javax.swing.JLabel" name="lblTo">
       <Properties>
