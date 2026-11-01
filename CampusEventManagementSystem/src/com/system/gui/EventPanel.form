@@ -226,11 +226,17 @@
       <Properties>
         <Property name="text" type="java.lang.String" value="Create Event"/>
       </Properties>
+      <Events>
+        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btnCerateEventActionPerformed"/>
+      </Events>
     </Component>
     <Component class="javax.swing.JButton" name="btnEventClear">
       <Properties>
         <Property name="text" type="java.lang.String" value="Clear"/>
       </Properties>
+      <Events>
+        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btnEventClearActionPerformed"/>
+      </Events>
     </Component>
     <Component class="javax.swing.JLabel" name="lblEventName">
       <Properties>
@@ -266,6 +272,9 @@
       <Properties>
         <Property name="text" type="java.lang.String" value="+ Add Speaker"/>
       </Properties>
+      <Events>
+        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btnAddSpeakerActionPerformed"/>
+      </Events>
     </Component>
     <Container class="javax.swing.JScrollPane" name="scrollpaneAddedSpeaker">
 
@@ -275,6 +284,9 @@
       <Properties>
         <Property name="text" type="java.lang.String" value="- Remove Speaker"/>
       </Properties>
+      <Events>
+        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btnRemoveSpeakerActionPerformed"/>
+      </Events>
     </Component>
     <Component class="javax.swing.JLabel" name="lblAddedSpeaker">
       <Properties>

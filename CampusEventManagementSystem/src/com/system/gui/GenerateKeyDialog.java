@@ -2,6 +2,7 @@ package com.system.gui;
 
 import classModel.UserAccount;
 import com.system.service.EventManager;
+import com.system.service.OrganizerKeyService;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
@@ -24,10 +25,10 @@ import javax.swing.SpinnerNumberModel;
 /**
  * Lets an administrator create ONE organizer invitation key and shows it once.
  * The key is not saved anywhere readable, so it cannot be displayed again after this window closes.
- * The service layer (EventManager) re-checks that the user really is an administrator.
+ * The service layer (OrganizerKeyService) re-checks that the user really is an administrator.
  */
 public class GenerateKeyDialog extends JDialog {
-    private final EventManager manager;
+    private final OrganizerKeyService keyService;
     private final UserAccount actor;
 
     private final JTextField txtLabel = new JTextField(22);
@@ -43,7 +44,7 @@ public class GenerateKeyDialog extends JDialog {
 
     public GenerateKeyDialog(JDialog owner, EventManager manager, UserAccount actor) {
         super(owner, "Generate Organizer Key", true);
-        this.manager = manager;
+        this.keyService = manager.getOrganizerKeyService();
         this.actor = actor;
         buildUi();
         pack();
@@ -99,13 +100,19 @@ public class GenerateKeyDialog extends JDialog {
         add(pnlResult, BorderLayout.CENTER);
         add(buttons, BorderLayout.SOUTH);
 
-        btnGenerate.addActionListener(e -> generate());
-        btnCopy.addActionListener(e -> copyKey());
-        btnClose.addActionListener(e -> dispose());
+        btnGenerate.addActionListener(this::btnGenerateActionPerformed);
+        btnCopy.addActionListener(this::btnCopyActionPerformed);
+        btnClose.addActionListener(this::btnCloseActionPerformed);
         getRootPane().setDefaultButton(btnGenerate);
     }
 
-    private void generate() {
+    // ---------- Handlers (hand-built dialog, so no .form) ----------
+    private void btnCopyActionPerformed(java.awt.event.ActionEvent evt) { copyKey(); }
+
+    private void btnCloseActionPerformed(java.awt.event.ActionEvent evt) { dispose(); }
+
+    /** Generate Key: read the label and the days, then ask the service (administrator check, 1-30 days, label length, saving). */
+    private void btnGenerateActionPerformed(java.awt.event.ActionEvent evt) {
         try {
             try {
                 spnDays.commitEdit();            // accept a number that was typed but not yet confirmed with Enter
@@ -113,7 +120,7 @@ public class GenerateKeyDialog extends JDialog {
                 throw new IllegalArgumentException("Enter the number of days as a whole number from 1 to 30.");
             }
             int days = ((Number) spnDays.getValue()).intValue();
-            String key = manager.generateOrganizerKey(actor, txtLabel.getText(), days);
+            String key = keyService.generateOrganizerKey(actor, txtLabel.getText(), days);
             generated = true;
             txtKey.setText(key);
             pnlResult.setVisible(true);

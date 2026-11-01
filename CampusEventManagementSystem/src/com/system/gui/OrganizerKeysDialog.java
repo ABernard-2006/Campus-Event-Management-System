@@ -3,6 +3,7 @@ package com.system.gui;
 import classModel.OrganizerKey;
 import classModel.UserAccount;
 import com.system.service.EventManager;
+import com.system.service.OrganizerKeyService;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -31,7 +32,8 @@ import javax.swing.table.DefaultTableModel;
 public class OrganizerKeysDialog extends JDialog {
     private static final DateTimeFormatter SHOWN = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-    private final EventManager manager;
+    private final EventManager manager;                       // given on to the Generate dialog
+    private final OrganizerKeyService keyService;
     private final UserAccount actor;
 
     private final DefaultTableModel model = new DefaultTableModel(
@@ -40,6 +42,7 @@ public class OrganizerKeysDialog extends JDialog {
         public boolean isCellEditable(int row, int column) { return false; }
     };
     private final JTable table = new JTable(model);
+    private List<OrganizerKey> shownKeys = new java.util.ArrayList<>();   // same order as the table rows
     private final JButton btnGenerate = new JButton("Generate New Key...");
     private final JButton btnRevoke = new JButton("Revoke Selected");
     private final JButton btnClose = new JButton("Close");
@@ -56,8 +59,9 @@ public class OrganizerKeysDialog extends JDialog {
     public OrganizerKeysDialog(Frame owner, EventManager manager, UserAccount actor) {
         super(owner, "Organizer Invitation Keys", true);
         this.manager = manager;
+        this.keyService = manager.getOrganizerKeyService();
         this.actor = actor;
-        manager.getOrganizerKeys(actor);        // throws SecurityException at once if 'actor' is not an administrator
+        keyService.getOrganizerKeys(actor);        // throws SecurityException at once if 'actor' is not an administrator
         buildUi();
         refresh();
         pack();
@@ -96,16 +100,16 @@ public class OrganizerKeysDialog extends JDialog {
         table.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) updateRevokeButton();
         });
-        btnGenerate.addActionListener(e -> generate());
-        btnRevoke.addActionListener(e -> revoke());
-        btnClose.addActionListener(e -> dispose());
+        btnGenerate.addActionListener(this::btnGenerateActionPerformed);
+        btnRevoke.addActionListener(this::btnRevokeActionPerformed);
+        btnClose.addActionListener(this::btnCloseActionPerformed);
     }
 
     private void refresh() {
         model.setRowCount(0);
         LocalDateTime now = LocalDateTime.now();
-        List<OrganizerKey> keys = manager.getOrganizerKeys(actor);
-        for (OrganizerKey k : keys) {
+        shownKeys = new java.util.ArrayList<>(keyService.getOrganizerKeys(actor));
+        for (OrganizerKey k : shownKeys) {
             model.addRow(new Object[] {
                 k.getKeyId(),
                 k.getLabel().isEmpty() ? "(no label)" : k.getLabel(),
@@ -120,25 +124,28 @@ public class OrganizerKeysDialog extends JDialog {
 
     private void updateRevokeButton() {
         int row = table.getSelectedRow();
-        btnRevoke.setEnabled(row >= 0 && "Active".equals(model.getValueAt(row, 2)));
+        // Only a key that can still be used to sign up can be revoked (the model decides; the service checks again).
+        btnRevoke.setEnabled(row >= 0 && row < shownKeys.size() && shownKeys.get(row).isUsable(LocalDateTime.now()));
     }
 
-    private void generate() {
+    private void btnCloseActionPerformed(java.awt.event.ActionEvent evt) { dispose(); }
+
+    private void btnGenerateActionPerformed(java.awt.event.ActionEvent evt) {
         GenerateKeyDialog dialog = new GenerateKeyDialog(this, manager, actor);
         dialog.setVisible(true);
         refresh();
     }
 
-    private void revoke() {
+    private void btnRevokeActionPerformed(java.awt.event.ActionEvent evt) {
         int row = table.getSelectedRow();
-        if (row < 0) return;
-        int keyId = (Integer) model.getValueAt(row, 0);
+        if (row < 0 || row >= shownKeys.size()) return;
+        int keyId = shownKeys.get(row).getKeyId();
         int answer = JOptionPane.showConfirmDialog(this,
                 "Revoke key #" + keyId + "? Nobody will be able to sign up with it afterwards.",
                 "Revoke Key", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
         if (answer != JOptionPane.YES_OPTION) return;
         try {
-            manager.revokeOrganizerKey(actor, keyId);
+            keyService.revokeOrganizerKey(actor, keyId);
         } catch (SecurityException | IllegalArgumentException | IllegalStateException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Revoke Key", JOptionPane.WARNING_MESSAGE);
         }
