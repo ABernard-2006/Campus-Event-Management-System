@@ -1,2 +1,0 @@
-# keyId|keyHash|label|createdBy|createdAt|expiresAt|status|usedBy|usedAt
-1|g+KgdtSmdzgGBENRNq7OBQ2Kk8YE9p6N/2xR4lSY7zA=||admin|2026-11-01T11:55:22|2026-11-08T11:55:22|USED|ab123|2026-11-01T11:56:26

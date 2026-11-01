@@ -21,16 +21,6 @@ public class Student extends Participant {
     public String getProgram() { return program; }
 
     @Override
-    public boolean sharesIdentityWith(Participant other) {
-        return other instanceof Student && ((Student) other).studentNumber.equalsIgnoreCase(studentNumber);
-    }
-
-    @Override
-    public String getDuplicateIdentityMessage() {
-        return "Student number " + studentNumber + " is already registered in the system.";
-    }
-
-    @Override
     public String displayDetails() {
         return "[STUDENT] " + getFullName() + " | SN: " + studentNumber + " | Program: " + program;
     }

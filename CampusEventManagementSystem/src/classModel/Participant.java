@@ -33,20 +33,6 @@ public abstract class Participant {
     public String getContactInfo() { return contactInfo; }
     public void setContactInfo(String contactInfo) { this.contactInfo = requireText(contactInfo, "Contact info"); }
 
-    /** True when this participant's contact (email) equals the given email, ignoring case and surrounding spaces. */
-    public boolean hasContact(String email) {
-        return email != null && contactInfo.equalsIgnoreCase(email.trim());
-    }
-
-    /**
-     * True when 'other' carries the same official ID as this participant (same student number, or same
-     * faculty ID). Participants without such an ID (guests) never share one.
-     */
-    public boolean sharesIdentityWith(Participant other) { return false; }
-
-    /** The error text used when {@link #sharesIdentityWith} is true. */
-    public String getDuplicateIdentityMessage() { return ""; }
-
     /** Each subclass describes itself differently (polymorphism). */
     public abstract String displayDetails();
 }

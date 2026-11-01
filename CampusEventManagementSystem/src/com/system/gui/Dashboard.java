@@ -7,9 +7,6 @@ package com.system.gui;
 import classModel.Event;
 import classModel.UserAccount;
 import com.system.service.EventManager;
-import com.system.service.AccessControl;
-import com.system.service.ChangeNotifier;
-import com.system.service.EventQueryService;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.CardLayout;
@@ -18,9 +15,12 @@ import java.awt.Dimension;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Supplier;
 import javax.swing.Box;
 import javax.swing.JButton;
@@ -50,10 +50,7 @@ public class Dashboard extends javax.swing.JFrame {
 
     private static final DateTimeFormatter TITLE_DATE = DateTimeFormatter.ofPattern("MMM d, yyyy");
 
-    private final EventManager manager;     // the one shared service registry (given on to child screens)
-    private final AccessControl access;
-    private final EventQueryService eventQueries;
-    private final ChangeNotifier changes;
+    private final EventManager manager;     // the one shared service object for the whole app
     private UserAccount account;            // the logged-in user; set to null again on logout
 
     private final CardLayout cardLayout = new CardLayout();
@@ -71,15 +68,12 @@ public class Dashboard extends javax.swing.JFrame {
     // ---------- Constructor ----------
     /**
      * @param manager the shared EventManager (the same one the login screen used)
-     * @param account the authenticated account returned by AuthenticationService.authenticate(...)
+     * @param account the authenticated account returned by EventManager.authenticate(...)
      */
     public Dashboard(EventManager manager, UserAccount account) {
         if (manager == null) throw new IllegalArgumentException("A Dashboard needs an EventManager.");
         if (account == null) throw new IllegalArgumentException("A Dashboard needs a logged-in account.");
         this.manager = manager;
-        this.access = manager.getAccessControl();
-        this.eventQueries = manager.getEventQueryService();
-        this.changes = manager.getChangeNotifier();
         this.account = account;
         initComponents();       // NetBeans-generated form: do not edit
         buildContentArea();     // header + switchable screens around the existing form
@@ -87,16 +81,20 @@ public class Dashboard extends javax.swing.JFrame {
         buildProfileHeader();
         buildHomeWidgets();
         refreshHome();
-        changes.addListener(dataListener);
+        manager.addChangeListener(dataListener);
         showCard(CARD_HOME);
         pack();                 // the profile header added extra height, so size the window again
         setLocationRelativeTo(null);
     }
 
-    // ---------- Role rules: the service decides, the Dashboard only shows or hides buttons ----------
-    private boolean canManageEvents() { return access.canManageEvents(account); }
-    private boolean canViewReports()  { return access.canViewReports(account); }
-    private boolean canManageKeys()   { return access.canManageOrganizerKeys(account); }
+    // ---------- Role rules (one place to change them) ----------
+    private boolean isAdministrator() { return account != null && UserAccount.ROLE_ADMIN.equals(account.getRole()); }
+    private boolean isOrganizer()     { return account != null && UserAccount.ROLE_ORGANIZER.equals(account.getRole()); }
+
+    /** Administrators and Organizers manage events; Participants only browse and register. */
+    private boolean canManageEvents() { return isAdministrator() || isOrganizer(); }
+    private boolean canViewReports()  { return isAdministrator() || isOrganizer(); }
+    private boolean canManageKeys()   { return isAdministrator(); }
 
     // ---------- Layout: wrap the form's centre panel so other screens can replace it ----------
     private void buildContentArea() {
@@ -113,8 +111,15 @@ public class Dashboard extends javax.swing.JFrame {
 
     // ---------- Sidebar buttons, role visibility, logout ----------
     private void buildSidebar() {
-        // The sidebar buttons, the search button and the search box are wired by the form
-        // (btnHome / btnEvents / btnRegister / btnManagement / btnStats / btnLogout / btnSearch / txtSearch ...Performed).
+        // btnHome is already wired by the form (btnHomeActionPerformed)
+        btnEvents.addActionListener(e -> showAllEvents(true));
+        btnRegister.addActionListener(e -> showCard(CARD_REGISTER));
+        btnManagement.addActionListener(e -> showCard(CARD_MANAGE));
+        btnStats.addActionListener(e -> showCard(CARD_REPORTS));
+        btnLogout.addActionListener(e -> logout());
+        btnSearch.addActionListener(e -> runSearch());
+        txtSearch.addActionListener(e -> runSearch());
+
         // Hide what this role cannot use. showCard() checks again, so this is not the only guard.
         btnManagement.setVisible(canManageEvents());
         btnStats.setVisible(canViewReports());
@@ -127,7 +132,7 @@ public class Dashboard extends javax.swing.JFrame {
             btnOrganizerKeys = new JButton("Organizer Keys");
             btnOrganizerKeys.setIcon(btnManagement.getIcon());
             btnOrganizerKeys.setPreferredSize(new Dimension(190, 40));
-            btnOrganizerKeys.addActionListener(this::btnOrganizerKeysActionPerformed);   // created in code, so not in the .form
+            btnOrganizerKeys.addActionListener(e -> openOrganizerKeys());
             pnlSide.add(btnOrganizerKeys, pnlSide.getComponentZOrder(jPanel3));   // just above the spacer
             spacer -= 45;
         }
@@ -184,7 +189,7 @@ public class Dashboard extends javax.swing.JFrame {
     }
 
     /**
-     * Called by the ChangeNotifier after any saved change. Redraws everything that shows event data:
+     * Called by EventManager after any saved change. Redraws everything that shows event data:
      * the calendar, upcoming list, event cards, and every management/registration/report screen.
      */
     private void onDataChanged() {
@@ -205,43 +210,10 @@ public class Dashboard extends javax.swing.JFrame {
         contentCards.revalidate();
     }
 
-    // ---------- Generated handlers: each one only navigates or starts a GUI flow ----------
+    // Generated handler for the Home button (kept because initComponents refers to it)
     private void btnHomeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnHomeActionPerformed
         showCard(CARD_HOME);
     }//GEN-LAST:event_btnHomeActionPerformed
-
-    private void btnEventsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEventsActionPerformed
-        showAllEvents(true);
-    }//GEN-LAST:event_btnEventsActionPerformed
-
-    private void btnRegisterActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRegisterActionPerformed
-        showCard(CARD_REGISTER);
-    }//GEN-LAST:event_btnRegisterActionPerformed
-
-    private void btnManagementActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnManagementActionPerformed
-        showCard(CARD_MANAGE);          // showCard re-checks the role through the service
-    }//GEN-LAST:event_btnManagementActionPerformed
-
-    private void btnStatsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStatsActionPerformed
-        showCard(CARD_REPORTS);         // showCard re-checks the role through the service
-    }//GEN-LAST:event_btnStatsActionPerformed
-
-    private void btnLogoutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLogoutActionPerformed
-        logout();
-    }//GEN-LAST:event_btnLogoutActionPerformed
-
-    private void btnSearchActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSearchActionPerformed
-        runSearch();
-    }//GEN-LAST:event_btnSearchActionPerformed
-
-    private void txtSearchActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtSearchActionPerformed
-        runSearch();
-    }//GEN-LAST:event_txtSearchActionPerformed
-
-    /** The "Organizer Keys" button is created in code (administrators only), so this handler is handwritten. */
-    private void btnOrganizerKeysActionPerformed(java.awt.event.ActionEvent evt) {
-        openOrganizerKeys();
-    }
 
     // ---------- Home screen: calendar, upcoming events, event cards, search ----------
     private void buildHomeWidgets() {
@@ -251,7 +223,7 @@ public class Dashboard extends javax.swing.JFrame {
 
     /** Re-reads the events from the manager and updates the calendar and the upcoming list. */
     private void refreshHome() {
-        List<Event> upcoming = eventQueries.getUpcomingEvents(3);
+        List<Event> upcoming = manager.getUpcomingEvents(3);
         List<String> names = new ArrayList<>();
         List<LocalDate> dates = new ArrayList<>();
         for (Event e : upcoming) {
@@ -260,14 +232,16 @@ public class Dashboard extends javax.swing.JFrame {
         }
         upcomingEventsPanel1.setEvents(names, dates);
 
-        calendarPanel1.setEventDates(eventQueries.getEventDates());
+        Set<LocalDate> eventDays = new HashSet<>();
+        for (Event e : manager.getAllEvents()) eventDays.add(e.getDate());
+        calendarPanel1.setEventDates(eventDays);
     }
 
     /** Home / Events / View all: every event, no filter. */
     private void showAllEvents(boolean asEventsView) {
         txtSearch.setText("");
         refreshHome();
-        showEventCards(() -> eventQueries.getAllEvents(), asEventsView ? "All Events" : "Dashboard",
+        showEventCards(() -> manager.getAllEvents(), asEventsView ? "All Events" : "Dashboard",
                 "No events have been created yet.");
         cardLayout.show(contentCards, CARD_HOME);
     }
@@ -278,13 +252,13 @@ public class Dashboard extends javax.swing.JFrame {
             showAllEvents(false);
             return;
         }
-        showEventCards(() -> eventQueries.searchEvent(keyword), "Search: " + keyword,
+        showEventCards(() -> manager.searchEvent(keyword), "Search: " + keyword,
                 "No events match \"" + keyword + "\".");
     }
 
     private void showEventsOn(LocalDate date) {
         txtSearch.setText("");
-        showEventCards(() -> eventQueries.getEventsOn(date), "Events on " + date.format(TITLE_DATE),
+        showEventCards(() -> manager.getEventsOn(date), "Events on " + date.format(TITLE_DATE),
                 "No events on " + date.format(TITLE_DATE) + ".");
     }
 
@@ -309,7 +283,7 @@ public class Dashboard extends javax.swing.JFrame {
             none.setAlignmentX(Component.LEFT_ALIGNMENT);
             eventsContainer.add(none);
         }
-        for (Event e : EventQueryService.orderForDisplay(events)) {
+        for (Event e : sortForDisplay(events)) {
             EventCardPanel card = new EventCardPanel();
             card.setEvent(e);
             card.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -322,9 +296,22 @@ public class Dashboard extends javax.swing.JFrame {
         javax.swing.SwingUtilities.invokeLater(() -> jScrollPane1.getVerticalScrollBar().setValue(keep));
     }
 
+    private static List<Event> sortForDisplay(List<Event> events) {
+        LocalDate today = LocalDate.now();
+        Comparator<Event> soonestFirst = Comparator.comparing(Event::getDate).thenComparing(Event::getStartTime);
+        Comparator<Event> latestFirst = soonestFirst.reversed();
+        List<Event> upcoming = new ArrayList<>();
+        List<Event> past = new ArrayList<>();
+        for (Event e : events) (e.getDate().isBefore(today) ? past : upcoming).add(e);
+        upcoming.sort(soonestFirst);
+        past.sort(latestFirst);
+        upcoming.addAll(past);
+        return upcoming;
+    }
+
     // ---------- Organizer keys (administrators only) ----------
     private void openOrganizerKeys() {
-        // The dialog and OrganizerKeyService both re-check the role, so a non-admin only ever gets a message.
+        // The dialog and EventManager both re-check the role, so a non-admin only ever gets a message.
         OrganizerKeysDialog.open(this, manager, account);
     }
 
@@ -334,7 +321,7 @@ public class Dashboard extends javax.swing.JFrame {
                 JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         if (choice != JOptionPane.YES_OPTION) return;
         account = null;                         // forget who was logged in
-        changes.removeListener(dataListener);
+        manager.removeChangeListener(dataListener);
         LoginFrame login = new LoginFrame(manager);
         login.setLocationRelativeTo(null);
         login.setVisible(true);
@@ -349,9 +336,6 @@ public class Dashboard extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        searchBarPanel1 = new com.system.gui.SearchBarPanel();
-        searchBarPanel2 = new com.system.gui.SearchBarPanel();
-        searchBarPanel3 = new com.system.gui.SearchBarPanel();
         pnlRoot = new javax.swing.JPanel();
         pnlSide = new javax.swing.JPanel();
         jPanel1 = new javax.swing.JPanel();
@@ -408,26 +392,22 @@ public class Dashboard extends javax.swing.JFrame {
         btnStats.setIcon(new javax.swing.ImageIcon(getClass().getResource("/com/system/gui/icon/icons8-combo-chart-24.png"))); // NOI18N
         btnStats.setText("Reports");
         btnStats.setPreferredSize(new java.awt.Dimension(190, 40));
-        btnStats.addActionListener(this::btnStatsActionPerformed);
         pnlSide.add(btnStats);
 
         btnRegister.setIcon(new javax.swing.ImageIcon(getClass().getResource("/com/system/gui/icon/icons8-register-24.png"))); // NOI18N
         btnRegister.setText("Register");
         btnRegister.setOpaque(true);
         btnRegister.setPreferredSize(new java.awt.Dimension(190, 40));
-        btnRegister.addActionListener(this::btnRegisterActionPerformed);
         pnlSide.add(btnRegister);
 
         btnManagement.setIcon(new javax.swing.ImageIcon(getClass().getResource("/com/system/gui/icon/icons8-management-24.png"))); // NOI18N
         btnManagement.setText("Manage Event");
         btnManagement.setPreferredSize(new java.awt.Dimension(190, 40));
-        btnManagement.addActionListener(this::btnManagementActionPerformed);
         pnlSide.add(btnManagement);
 
         btnEvents.setIcon(new javax.swing.ImageIcon(getClass().getResource("/com/system/gui/icon/icons8-event-24.png"))); // NOI18N
         btnEvents.setText("Events");
         btnEvents.setPreferredSize(new java.awt.Dimension(190, 40));
-        btnEvents.addActionListener(this::btnEventsActionPerformed);
         pnlSide.add(btnEvents);
 
         jPanel3.setBackground(new java.awt.Color(255, 255, 255));
@@ -449,7 +429,6 @@ public class Dashboard extends javax.swing.JFrame {
         btnLogout.setIcon(new javax.swing.ImageIcon(getClass().getResource("/com/system/gui/icon/icons8-logout-24.png"))); // NOI18N
         btnLogout.setText("Logout");
         btnLogout.setPreferredSize(new java.awt.Dimension(190, 40));
-        btnLogout.addActionListener(this::btnLogoutActionPerformed);
         pnlSide.add(btnLogout);
 
         pnlRoot.add(pnlSide, java.awt.BorderLayout.WEST);
@@ -494,9 +473,6 @@ public class Dashboard extends javax.swing.JFrame {
         );
 
         btnSearch.setIcon(new javax.swing.ImageIcon(getClass().getResource("/com/system/gui/icon/icons8-search-24.png"))); // NOI18N
-        btnSearch.addActionListener(this::btnSearchActionPerformed);
-
-        txtSearch.addActionListener(this::txtSearchActionPerformed);
 
         jLabel1.setFont(new java.awt.Font("Segoe UI", 1, 24)); // NOI18N
         jLabel1.setText("Dashboard");
@@ -573,9 +549,6 @@ public class Dashboard extends javax.swing.JFrame {
     private javax.swing.JPanel pnlCenter;
     private javax.swing.JPanel pnlRoot;
     private javax.swing.JPanel pnlSide;
-    private com.system.gui.SearchBarPanel searchBarPanel1;
-    private com.system.gui.SearchBarPanel searchBarPanel2;
-    private com.system.gui.SearchBarPanel searchBarPanel3;
     private javax.swing.JTextField txtSearch;
     private com.system.gui.UpcomingEventsPanel upcomingEventsPanel1;
     // End of variables declaration//GEN-END:variables

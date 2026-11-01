@@ -9,7 +9,7 @@ import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 
 /**
- * The "Manage Event" screen: three tabs that all use the same shared EventManager (service registry).
+ * The "Manage Event" screen: three tabs that all use the same shared EventManager.
  *   1. Create / Edit  - the existing EventPanel form
  *   2. Event List     - edit or delete events
  *   3. Attendance     - mark who attended

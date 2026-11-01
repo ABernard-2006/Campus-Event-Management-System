@@ -1,4 +1,3 @@
 # venueId|name|location|capacity
 1|CSB4|TBA|40
 2|cs|TBA|12
-3|NPL|TBA|123

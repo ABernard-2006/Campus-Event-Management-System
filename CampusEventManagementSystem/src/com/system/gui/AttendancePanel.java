@@ -5,13 +5,11 @@ import classModel.Event;
 import classModel.Registration;
 import classModel.UserAccount;
 import com.system.service.EventManager;
-import com.system.service.AttendanceService;
-import com.system.service.EventQueryService;
-import com.system.service.RegistrationService;
 import com.system.service.StorageException;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -26,13 +24,11 @@ import javax.swing.table.DefaultTableModel;
 /**
  * Attendance screen for Administrators and Organizers: choose an event, see who registered,
  * and mark the selected people Present or Absent. Handwritten (no .form file).
- * Every change goes through AttendanceService.markAttendance(...), which checks the permission,
+ * Every change goes through EventManager.markAttendance(...), which checks the permission,
  * the registration, and that a registration never gets two attendance records.
  */
 public class AttendancePanel extends JPanel implements Refreshable {
-    private final EventQueryService eventQueries;
-    private final RegistrationService registrations;
-    private final AttendanceService attendance;
+    private final EventManager manager;
     private final UserAccount actor;
     private final List<Event> eventChoices = new ArrayList<>();            // same order as the combo box
     private List<Registration> shown = new ArrayList<>();                  // same order as the table rows
@@ -45,13 +41,9 @@ public class AttendancePanel extends JPanel implements Refreshable {
     };
     private final JTable table = new JTable(model);
     private final JLabel lblSummary = new JLabel(" ");
-    private JButton btnPresent;
-    private JButton btnAbsent;
 
     public AttendancePanel(EventManager manager, UserAccount actor) {
-        this.eventQueries = manager.getEventQueryService();
-        this.registrations = manager.getRegistrationService();
-        this.attendance = manager.getAttendanceService();
+        this.manager = manager;
         this.actor = actor;
         build();
         refresh();
@@ -82,8 +74,8 @@ public class AttendancePanel extends JPanel implements Refreshable {
         table.getColumnModel().getColumn(3).setPreferredWidth(150);
         add(new JScrollPane(table), BorderLayout.CENTER);
 
-        btnPresent = new JButton("Mark Present");
-        btnAbsent = new JButton("Mark Absent");
+        JButton btnPresent = new JButton("Mark Present");
+        JButton btnAbsent = new JButton("Mark Absent");
         JPanel bottom = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         bottom.setOpaque(false);
         bottom.add(btnPresent);
@@ -91,9 +83,9 @@ public class AttendancePanel extends JPanel implements Refreshable {
         bottom.add(lblSummary);
         add(bottom, BorderLayout.SOUTH);
 
-        cmbEvent.addActionListener(this::cmbEventActionPerformed);
-        btnPresent.addActionListener(this::btnPresentActionPerformed);
-        btnAbsent.addActionListener(this::btnAbsentActionPerformed);
+        cmbEvent.addActionListener(e -> { if (!loading) loadRegistrations(); });
+        btnPresent.addActionListener(e -> mark(true));
+        btnAbsent.addActionListener(e -> mark(false));
     }
 
     /** Rebuilds the event list and the table, keeping the same event selected when it still exists. */
@@ -106,7 +98,8 @@ public class AttendancePanel extends JPanel implements Refreshable {
         loading = true;
         eventChoices.clear();
         cmbEvent.removeAllItems();
-        List<Event> sorted = eventQueries.getEventsChronological();
+        List<Event> sorted = new ArrayList<>(manager.getAllEvents());
+        sorted.sort(Comparator.comparing(Event::getDate).thenComparing(Event::getStartTime));
         int select = sorted.isEmpty() ? -1 : 0;
         for (Event e : sorted) {
             if (e.getEventId() == keepId) select = eventChoices.size();
@@ -138,7 +131,7 @@ public class AttendancePanel extends JPanel implements Refreshable {
             return;
         }
         try {
-            shown = new ArrayList<>(registrations.getRegistrationsFor(actor, event));
+            shown = new ArrayList<>(manager.getRegistrationsFor(actor, event));
         } catch (SecurityException ex) {
             lblSummary.setText(ex.getMessage());
             return;
@@ -146,20 +139,11 @@ public class AttendancePanel extends JPanel implements Refreshable {
         for (Registration r : shown) {
             model.addRow(new Object[]{r.getRegistrationId(), r.getParticipant().getFullName(),
                 r.getParticipant().getClass().getSimpleName(), r.getParticipant().getContactInfo(),
-                r.getRegistrationDate().toString(), r.getStatus(), attendanceLabel(r, attendance.getAttendance(r))});
+                r.getRegistrationDate().toString(), r.getStatus(), attendanceLabel(r, manager.getAttendance(r))});
         }
-        lblSummary.setText("Registered: " + registrations.countActive(event) + "   Present: " + attendance.countAttended(event));
+        lblSummary.setText("Registered: " + manager.countActive(event) + "   Present: " + manager.countAttended(event));
     }
 
-    private void cmbEventActionPerformed(java.awt.event.ActionEvent evt) {
-        if (!loading) loadRegistrations();
-    }
-
-    private void btnPresentActionPerformed(java.awt.event.ActionEvent evt) { mark(true); }
-
-    private void btnAbsentActionPerformed(java.awt.event.ActionEvent evt) { mark(false); }
-
-    /** Reads the selected rows, then asks EventManager.markAttendance (staff-only, one record per registration) for each. */
     private void mark(boolean present) {
         int[] rows = table.getSelectedRows();
         if (rows.length == 0) {
@@ -174,7 +158,7 @@ public class AttendancePanel extends JPanel implements Refreshable {
         List<String> problems = new ArrayList<>();
         for (Registration r : picked) {
             try {
-                attendance.markAttendance(actor, r, present);
+                manager.markAttendance(actor, r, present);
                 done++;
             } catch (SecurityException ex) {
                 JOptionPane.showMessageDialog(this, ex.getMessage(), "Not allowed", JOptionPane.WARNING_MESSAGE);

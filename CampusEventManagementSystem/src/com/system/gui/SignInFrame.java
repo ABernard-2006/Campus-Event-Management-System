@@ -10,7 +10,6 @@ package com.system.gui;
  */
 import classModel.UserAccount;
 import com.system.service.EventManager;
-import com.system.service.AuthenticationService;
 import java.awt.BorderLayout;
 import java.awt.Cursor;
 import java.awt.Dimension;
@@ -30,8 +29,7 @@ public class SignInFrame extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(SignInFrame.class.getName());
 
-    private final EventManager manager;                       // only used to open the login window again
-    private final AuthenticationService authentication;
+    private final EventManager manager;
     private final LoginFrame loginFrame;       // the window to go back to (may be null when run on its own)
 
     // Extra controls that are built in code (they are not in SignInFrame.form)
@@ -56,7 +54,6 @@ public class SignInFrame extends javax.swing.JFrame {
 
     public SignInFrame(EventManager manager, LoginFrame loginFrame) {
         this.manager = manager;
-        this.authentication = manager.getAuthenticationService();
         this.loginFrame = loginFrame;
         initComponents();
         setUpSignUp();
@@ -110,7 +107,7 @@ public class SignInFrame extends javax.swing.JFrame {
         addRow(passCreatePass, 2);
         addRow(lblConfirmPass, 10);
         addRow(passConfirmPass, 2);
-        addRow(btnRegister, 16);
+        addRow(btnSignIn, 16);
         addRow(lblSignUp, 14);
 
         setInviteKeyVisible(false);
@@ -131,7 +128,7 @@ public class SignInFrame extends javax.swing.JFrame {
         getContentPane().removeAll();
         getContentPane().setLayout(new BorderLayout());
         getContentPane().add(jPanel1, BorderLayout.CENTER);
-        getRootPane().setDefaultButton(btnRegister);          // pressing Enter registers
+        getRootPane().setDefaultButton(btnSignIn);          // pressing Enter registers
         setTitle("Campus Event Management System - Register");
         setResizable(false);
         setPreferredSize(null);                             // let the window fit its content
@@ -181,7 +178,7 @@ public class SignInFrame extends javax.swing.JFrame {
         lblCreatePass = new javax.swing.JLabel();
         lblSignInEmail = new javax.swing.JLabel();
         txtEmailAdd = new javax.swing.JTextField();
-        btnRegister = new javax.swing.JButton();
+        btnSignIn = new javax.swing.JButton();
         lblSignUp = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -193,8 +190,6 @@ public class SignInFrame extends javax.swing.JFrame {
         lblSignInToCMS.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         lblSignInToCMS.setText("Campus Event Management System");
 
-        passCreatePass.addActionListener(this::passCreatePassActionPerformed);
-
         lblSigInUser.setText("Username");
 
         jLabel1.setFont(new java.awt.Font("Calibri", 0, 12)); // NOI18N
@@ -204,10 +199,10 @@ public class SignInFrame extends javax.swing.JFrame {
 
         lblSignInEmail.setText("Email Address");
 
-        btnRegister.setBackground(new java.awt.Color(51, 51, 51));
-        btnRegister.setForeground(new java.awt.Color(255, 255, 255));
-        btnRegister.setText("Register");
-        btnRegister.addActionListener(this::btnRegisterActionPerformed);
+        btnSignIn.setBackground(new java.awt.Color(51, 51, 51));
+        btnSignIn.setForeground(new java.awt.Color(255, 255, 255));
+        btnSignIn.setText("Register");
+        btnSignIn.addActionListener(this::btnSignInActionPerformed);
 
         lblSignUp.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         lblSignUp.setText("<html>Already have an account? <font color='blue'><u>Login</u></font></html>");
@@ -231,7 +226,7 @@ public class SignInFrame extends javax.swing.JFrame {
                             .addComponent(lblSignInEmail)
                             .addComponent(lblCreatePass)
                             .addComponent(passCreatePass)
-                            .addComponent(btnRegister, javax.swing.GroupLayout.DEFAULT_SIZE, 360, Short.MAX_VALUE))))
+                            .addComponent(btnSignIn, javax.swing.GroupLayout.DEFAULT_SIZE, 360, Short.MAX_VALUE))))
                 .addContainerGap(22, Short.MAX_VALUE))
             .addComponent(lblSignUp, javax.swing.GroupLayout.Alignment.TRAILING)
         );
@@ -255,7 +250,7 @@ public class SignInFrame extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(passCreatePass, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(btnRegister)
+                .addComponent(btnSignIn)
                 .addGap(18, 18, 18)
                 .addComponent(lblSignUp, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(24, Short.MAX_VALUE))
@@ -280,24 +275,13 @@ public class SignInFrame extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void btnRegisterActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRegisterActionPerformed
+    private void btnSignInActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSignInActionPerformed
         char[] password = passCreatePass.getPassword();
         char[] confirm = passConfirmPass.getPassword();
         String role = (String) cmbRegisterAs.getSelectedItem();
         try {
-            // ---- immediate input validation (empty fields / mismatch; focus on the field to fix) ----
-            if (txtSignInUser.getText().trim().isEmpty()) { warn("Username is required.", txtSignInUser); return; }
-            if (txtEmailAdd.getText().trim().isEmpty()) { warn("Email address is required.", txtEmailAdd); return; }
-            if (password.length == 0) { warn("Password is required.", passCreatePass); return; }
-            if (!Arrays.equals(password, confirm)) { warn("Passwords do not match.", passConfirmPass); return; }
-            if (UserAccount.ROLE_ORGANIZER.equals(role) && txtInviteKey.getText().trim().isEmpty()) {
-                warn("An invitation key is required to register as an Organizer.", txtInviteKey);
-                return;
-            }
-
-            // ---- delegate to the service: every rule (no Administrator sign-up, key checks, unique
-            //      username/email, password rules) is enforced inside AuthenticationService.registerAccount ----
-            UserAccount created = authentication.registerAccount(
+            // All the rules (no Administrator accounts, key checks, duplicates) live in EventManager.
+            UserAccount created = manager.registerAccount(
                     txtSignInUser.getText(), txtEmailAdd.getText(),
                     new String(password), new String(confirm),
                     role, txtInviteKey.getText());
@@ -311,16 +295,7 @@ public class SignInFrame extends javax.swing.JFrame {
             Arrays.fill(password, '\0');
             Arrays.fill(confirm, '\0');
         }
-    }//GEN-LAST:event_btnRegisterActionPerformed
-
-    private void passCreatePassActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_passCreatePassActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_passCreatePassActionPerformed
-
-    private void warn(String message, java.awt.Component focusTarget) {
-        JOptionPane.showMessageDialog(this, message, "Registration", JOptionPane.WARNING_MESSAGE);
-        focusTarget.requestFocusInWindow();
-    }
+    }//GEN-LAST:event_btnSignInActionPerformed
 
     /**
      * @param args the command line arguments
@@ -348,7 +323,7 @@ public class SignInFrame extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton btnRegister;
+    private javax.swing.JButton btnSignIn;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JLabel lblCreatePass;

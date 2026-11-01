@@ -69,7 +69,7 @@
                               <Component id="lblSignInEmail" alignment="0" min="-2" max="-2" attributes="0"/>
                               <Component id="lblCreatePass" alignment="0" min="-2" max="-2" attributes="0"/>
                               <Component id="passCreatePass" alignment="0" max="32767" attributes="0"/>
-                              <Component id="btnRegister" alignment="0" pref="360" max="32767" attributes="0"/>
+                              <Component id="btnSignIn" alignment="0" pref="360" max="32767" attributes="0"/>
                           </Group>
                       </Group>
                   </Group>
@@ -98,7 +98,7 @@
                   <EmptySpace max="-2" attributes="0"/>
                   <Component id="passCreatePass" min="-2" max="-2" attributes="0"/>
                   <EmptySpace type="separate" max="-2" attributes="0"/>
-                  <Component id="btnRegister" min="-2" max="-2" attributes="0"/>
+                  <Component id="btnSignIn" min="-2" max="-2" attributes="0"/>
                   <EmptySpace type="separate" max="-2" attributes="0"/>
                   <Component id="lblSignUp" min="-2" max="-2" attributes="0"/>
                   <EmptySpace pref="24" max="32767" attributes="0"/>
@@ -119,9 +119,6 @@
         <Component class="javax.swing.JTextField" name="txtSignInUser">
         </Component>
         <Component class="javax.swing.JPasswordField" name="passCreatePass">
-          <Events>
-            <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="passCreatePassActionPerformed"/>
-          </Events>
         </Component>
         <Component class="javax.swing.JLabel" name="lblSigInUser">
           <Properties>
@@ -148,7 +145,7 @@
         </Component>
         <Component class="javax.swing.JTextField" name="txtEmailAdd">
         </Component>
-        <Component class="javax.swing.JButton" name="btnRegister">
+        <Component class="javax.swing.JButton" name="btnSignIn">
           <Properties>
             <Property name="background" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
               <Color blue="33" green="33" red="33" type="rgb"/>
@@ -159,7 +156,7 @@
             <Property name="text" type="java.lang.String" value="Register"/>
           </Properties>
           <Events>
-            <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btnRegisterActionPerformed"/>
+            <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btnSignInActionPerformed"/>
           </Events>
         </Component>
         <Component class="javax.swing.JLabel" name="lblSignUp">
