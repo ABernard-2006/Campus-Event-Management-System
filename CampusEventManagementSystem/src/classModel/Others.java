@@ -1,32 +1,24 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package classModel;
 
-/**
- *
- * @author bernard_07
- */
+/** An external participant who is neither a student nor faculty. */
+public class Others extends Participant {
+    private final String orgAffiliation;
 
-public class Others extends Participant 
-{
-    private String orgAffiliation;
-
-    public Others(String fullName, String contactInfo, String orgAffiliation) 
-    {
+    public Others(String fullName, String contactInfo, String orgAffiliation) {
         super(fullName, contactInfo);
-        this.orgAffiliation = orgAffiliation;
+        this.orgAffiliation = requireText(orgAffiliation, "Affiliation");
     }
 
-    public String getOrgAffiliation() 
-    { 
-        return orgAffiliation; 
+    /** Rebuilds a saved guest. */
+    public Others(int participantId, String fullName, String contactInfo, String orgAffiliation) {
+        super(participantId, fullName, contactInfo);
+        this.orgAffiliation = requireText(orgAffiliation, "Affiliation");
     }
+
+    public String getOrgAffiliation() { return orgAffiliation; }
 
     @Override
-    public String displayDetails() 
-    {
+    public String displayDetails() {
         return "[GUEST] " + getFullName() + " | Affiliation: " + orgAffiliation;
     }
 }

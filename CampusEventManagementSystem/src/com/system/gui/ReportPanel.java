@@ -4,17 +4,196 @@
  */
 package com.system.gui;
 
+import classModel.Event;
+import classModel.UserAccount;
+import com.system.service.EventManager;
+import com.system.service.EventReportRow;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.List;
+import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
+import javax.swing.JTextArea;
+import javax.swing.table.DefaultTableModel;
+
 /**
+ * Event and attendance report (Administrators and Organizers only).
+ *
+ * Table columns:  Event Name | Total Registration | Attended | Student | Faculty | Others
+ *  - Total Registration = valid (not cancelled) registrations of the event
+ *  - Attended           = valid registrations marked present
+ *  - Student/Faculty/Others = valid registrations by participant category
+ * Every number comes from EventManager.buildReport(...), which counts the real Registration,
+ * Participant and Attendance objects. Double-click a row to see the event's own
+ * displayDetails() text (each Event subclass describes itself differently = polymorphism).
+ *
+ * The generated NetBeans code below is untouched; everything handwritten is above it.
  *
  * @author Dhustine
  */
-public class ReportPanel extends javax.swing.JPanel {
+public class ReportPanel extends javax.swing.JPanel implements Refreshable {
+    private static final String ALL_EVENTS = "All Events";
+    private static final String ALL_TYPES = "All Types";
 
-    /**
-     * Creates new form ReportPanel
-     */
+    private final EventManager manager;
+    private final UserAccount actor;
+    private final List<Event> eventChoices = new ArrayList<>();   // index i  <->  combo item i + 1 (item 0 = all)
+    private final List<EventReportRow> rows = new ArrayList<>();  // same order as the table rows
+    private boolean updating;                                     // true while the screen itself changes controls
+    private boolean dateRangeEditedByUser;                        // false = range follows the saved events
+
+    private final DefaultTableModel tableModel = new DefaultTableModel(new Object[][]{},
+            new String[]{"Event Name", "Total Registration", "Attended", "Student", "Faculty", "Others"}) {
+        @Override public boolean isCellEditable(int row, int col) { return false; }
+        @Override public Class<?> getColumnClass(int c) { return c == 0 ? String.class : Integer.class; }
+    };
+
+    /** Creates new form ReportPanel (used by the NetBeans designer only). */
     public ReportPanel() {
+        this(null, null);
+    }
+
+    public ReportPanel(EventManager manager, UserAccount actor) {
+        this.manager = manager;
+        this.actor = actor;
         initComponents();
+        setupReport();
+    }
+
+    private void setupReport() {
+        reportTable.setModel(tableModel);
+        reportTable.setAutoCreateRowSorter(true);
+        reportTable.setRowHeight(22);
+
+        spinMinDateRange.setEditor(new JSpinner.DateEditor(spinMinDateRange, "yyyy-MM-dd"));
+        spinMaxDateRange.setEditor(new JSpinner.DateEditor(spinMaxDateRange, "yyyy-MM-dd"));
+
+        cmbReportType.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{ALL_TYPES, "Workshop", "Seminar"}));
+
+        btnGanerateReport.addActionListener(e -> generate());
+        cmbSelectEvents.addActionListener(e -> { if (!updating) generate(); });
+        cmbReportType.addActionListener(e -> { if (!updating) generate(); });
+        javax.swing.event.ChangeListener dateChanged = e -> {
+            if (updating) return;
+            dateRangeEditedByUser = true;
+            generate();
+        };
+        spinMinDateRange.addChangeListener(dateChanged);
+        spinMaxDateRange.addChangeListener(dateChanged);
+
+        reportTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) showDetails();
+            }
+        });
+        refresh();
+    }
+
+    // ---------- date helpers ----------
+    private static Date toDate(LocalDate d) {
+        return Date.from(d.atStartOfDay(ZoneId.systemDefault()).toInstant());
+    }
+
+    private static LocalDate toLocalDate(Object spinnerValue) {
+        return ((Date) spinnerValue).toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+    }
+
+    /** Re-reads the events: rebuilds the event list, widens the date range if needed, and redraws the table. */
+    @Override
+    public void refresh() {
+        if (manager == null) return;
+        updating = true;
+        try {
+            int keepId = -1;
+            int sel = cmbSelectEvents.getSelectedIndex();
+            if (sel > 0 && sel - 1 < eventChoices.size()) keepId = eventChoices.get(sel - 1).getEventId();
+
+            eventChoices.clear();
+            cmbSelectEvents.removeAllItems();
+            cmbSelectEvents.addItem(ALL_EVENTS);
+            List<Event> sorted = new ArrayList<>(manager.getAllEvents());
+            sorted.sort(Comparator.comparing(Event::getDate).thenComparing(Event::getStartTime));
+            int select = 0;
+            for (Event e : sorted) {
+                if (e.getEventId() == keepId) select = eventChoices.size() + 1;
+                eventChoices.add(e);
+                cmbSelectEvents.addItem(e.getEventId() + " - " + e.getEventName());
+            }
+            cmbSelectEvents.setSelectedIndex(select);
+
+            if (!dateRangeEditedByUser) {            // until the user picks dates, the range covers every event
+                LocalDate min = LocalDate.now();
+                LocalDate max = LocalDate.now();
+                if (!sorted.isEmpty()) {
+                    min = sorted.get(0).getDate();
+                    max = sorted.get(sorted.size() - 1).getDate();
+                    for (Event e : sorted) {
+                        if (e.getDate().isBefore(min)) min = e.getDate();
+                        if (e.getDate().isAfter(max)) max = e.getDate();
+                    }
+                }
+                spinMinDateRange.setValue(toDate(min));
+                spinMaxDateRange.setValue(toDate(max));
+            }
+        } finally {
+            updating = false;
+        }
+        generate();
+    }
+
+    /** Builds the table and the three summary tiles from the CURRENT filter settings. */
+    private void generate() {
+        if (manager == null || updating) return;
+        tableModel.setRowCount(0);
+        rows.clear();
+        try {
+            int sel = cmbSelectEvents.getSelectedIndex();
+            Event only = (sel > 0 && sel - 1 < eventChoices.size()) ? eventChoices.get(sel - 1) : null;
+            String type = String.valueOf(cmbReportType.getSelectedItem());
+            LocalDate from = toLocalDate(spinMinDateRange.getValue());
+            LocalDate to = toLocalDate(spinMaxDateRange.getValue());
+
+            rows.addAll(manager.buildReport(actor, type, only, from, to));
+            int totalReg = 0;
+            int totalAttended = 0;
+            for (EventReportRow r : rows) {
+                tableModel.addRow(new Object[]{r.getEventName(), r.getTotalRegistration(), r.getAttended(),
+                    r.getStudents(), r.getFaculty(), r.getOthers()});
+                totalReg += r.getTotalRegistration();
+                totalAttended += r.getAttended();
+            }
+            lblTotalRegNum.setText(String.valueOf(totalReg));
+            lblTotalAttendNum.setText(String.valueOf(totalAttended));
+            lblTotalAttendRateNum.setText(String.format("%.1f%%", EventManager.attendanceRate(totalAttended, totalReg)));
+            lblGenerateReport.setText("Generated Report Table (" + rows.size() + " event" + (rows.size() == 1 ? "" : "s") + ")");
+        } catch (SecurityException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Not allowed", JOptionPane.WARNING_MESSAGE);
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            lblTotalRegNum.setText("0");
+            lblTotalAttendNum.setText("0");
+            lblTotalAttendRateNum.setText("0.0%");
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Report filter", JOptionPane.WARNING_MESSAGE);
+        }
+    }
+
+    /** Double-click a row: shows the event's own description (Workshop and Seminar print different details). */
+    private void showDetails() {
+        int viewRow = reportTable.getSelectedRow();
+        if (viewRow < 0) return;
+        int row = reportTable.convertRowIndexToModel(viewRow);
+        if (row < 0 || row >= rows.size()) return;
+        try {
+            JTextArea text = new JTextArea(manager.describeEvent(actor, rows.get(row).getEvent()), 12, 40);
+            text.setEditable(false);
+            text.setFont(new java.awt.Font(java.awt.Font.MONOSPACED, java.awt.Font.PLAIN, 12));
+            JOptionPane.showMessageDialog(this, new JScrollPane(text), "Event details", JOptionPane.PLAIN_MESSAGE);
+        } catch (SecurityException | IllegalArgumentException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Event details", JOptionPane.WARNING_MESSAGE);
+        }
     }
 
     /**

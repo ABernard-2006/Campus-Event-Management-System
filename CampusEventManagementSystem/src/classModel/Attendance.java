@@ -1,23 +1,26 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package classModel;
+
 import CEMS.Main;
-/**
- *
- * @author ASUS2
- */
+
+/** Records whether a registered participant actually attended. */
 public class Attendance {
     private final int attendanceId;
     private final Registration registration;
     private boolean attended;
 
+    /** Creates a NEW attendance record (starts as absent). */
     public Attendance(Registration registration) {
+        this(Main.generateAttendanceId(), registration, false);
+    }
+
+    /** Rebuilds a saved attendance record. */
+    public Attendance(int attendanceId, Registration registration, boolean attended) {
+        if (attendanceId <= 0) throw new IllegalArgumentException("Attendance ID must be a positive number.");
         if (registration == null) throw new IllegalArgumentException("Registration is required.");
-        this.attendanceId = Main.generateId();
+        this.attendanceId = attendanceId;
+        Main.syncAttendanceId(attendanceId);
         this.registration = registration;
-        this.attended = false;
+        this.attended = attended;
     }
 
     public int getAttendanceId() { return attendanceId; }

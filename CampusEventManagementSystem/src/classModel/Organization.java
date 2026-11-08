@@ -1,43 +1,30 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package classModel;
 
-/**
- *
- * @author bernard_07
- */
-public class Organization 
-{
-    private int orgId;
-    private String orgName;
+import CEMS.Main;
+
+public class Organization {
+    private final int orgId;
+    private final String orgName;
     private String description;
 
-    public Organization(int orgId, String orgName, String description) 
-    {
+    /** Creates a NEW organization with an automatically generated ID. */
+    public Organization(String orgName, String description) {
+        this(Main.generateOrgId(), orgName, description);
+    }
+
+    /** Rebuilds a saved organization. */
+    public Organization(int orgId, String orgName, String description) {
+        if (orgId <= 0) throw new IllegalArgumentException("Organization ID must be a positive number.");
+        if (orgName == null || orgName.trim().isEmpty()) throw new IllegalArgumentException("Organization name is required.");
         this.orgId = orgId;
-        this.orgName = orgName;
-        this.description = description;
+        Main.syncOrgId(orgId);
+        this.orgName = orgName.trim();
+        this.description = description == null ? "" : description.trim();
     }
 
-    public int getOrgId() 
-    { 
-        return orgId; 
-    }
-    
-    public String getOrgName() 
-    { 
-        return orgName; 
-    }
-    
-    public String getDescription() 
-    { 
-        return description; 
-    }
-
-    public void setDescription(String description) 
-    {
-        this.description = description;
-    }
+    public int getOrgId() { return orgId; }
+    public String getOrgName() { return orgName; }
+    public String getOrganizationName() { return orgName; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description == null ? "" : description.trim(); }
 }
