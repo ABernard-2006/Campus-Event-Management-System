@@ -59,7 +59,6 @@ public class Dashboard extends javax.swing.JFrame {
     private final CardLayout cardLayout = new CardLayout();
     private final JPanel contentCards = new JPanel(cardLayout);
     private final Map<String, JComponent> cards = new HashMap<>();
-    private final ProfileHeaderPanel profileHeader = new ProfileHeaderPanel();
     private JButton btnOrganizerKeys;       // only created for administrators
 
     // What the Home/Events card list is currently showing, so it can be redrawn after any data change
@@ -84,7 +83,7 @@ public class Dashboard extends javax.swing.JFrame {
         initComponents();       // NetBeans-generated form: do not edit
         buildContentArea();     // header + switchable screens around the existing form
         buildSidebar();         // button handlers, role rules, organizer-key button
-        buildProfileHeader();
+        applyTheme();           // colours, logo and the highlighted menu button
         buildHomeWidgets();
         refreshHome();
         changes.addListener(dataListener);
@@ -100,13 +99,19 @@ public class Dashboard extends javax.swing.JFrame {
 
     // ---------- Layout: wrap the form's centre panel so other screens can replace it ----------
     private void buildContentArea() {
+        // The form gives the centre panel 1200 x 700 but its contents only need about 1070 px of width,
+        // so size it to its contents and the window has no empty strip on the right.
+        Dimension fit = new Dimension(1070, 700);
+        pnlCenter.setMinimumSize(fit);
+        pnlCenter.setPreferredSize(fit);
+        pnlCenter.setMaximumSize(fit);
+
         pnlRoot.remove(pnlCenter);                        // the form's "home" screen
         contentCards.add(pnlCenter, CARD_HOME);
         cards.put(CARD_HOME, pnlCenter);
 
         JPanel contentArea = new JPanel(new BorderLayout());
         contentArea.setBackground(pnlCenter.getBackground());
-        contentArea.add(profileHeader, BorderLayout.NORTH);
         contentArea.add(contentCards, BorderLayout.CENTER);
         pnlRoot.add(contentArea, BorderLayout.CENTER);
     }
@@ -125,7 +130,7 @@ public class Dashboard extends javax.swing.JFrame {
 
         if (canManageKeys()) {
             btnOrganizerKeys = new JButton("Organizer Keys");
-            btnOrganizerKeys.setIcon(btnManagement.getIcon());
+            btnOrganizerKeys.setIcon(new javax.swing.ImageIcon(getClass().getResource("/com/system/gui/icon/icons8-key-24.png")));
             btnOrganizerKeys.setPreferredSize(new Dimension(190, 40));
             btnOrganizerKeys.addActionListener(this::btnOrganizerKeysActionPerformed);   // created in code, so not in the .form
             pnlSide.add(btnOrganizerKeys, pnlSide.getComponentZOrder(jPanel3));   // just above the spacer
@@ -136,10 +141,58 @@ public class Dashboard extends javax.swing.JFrame {
         pnlSide.repaint();
     }
 
-    private void buildProfileHeader() {
-        profileHeader.setUser(account.getUsername(), account.getRole());
-        if (canManageKeys()) profileHeader.addMenuItem("Organizer Keys", this::openOrganizerKeys);
-        profileHeader.addMenuItem("Logout", this::logout);
+    // ---------- Look: colours, logo, menu highlight ----------
+    /**
+     * Applies the application's look (see UiKit) to the form. Kept here, outside the generated code, so the
+     * Form Editor cannot overwrite it. The Design view shows the form's own plain colours; this method
+     * restyles them when the window is created.
+     */
+    private void applyTheme() {
+        setTitle("Campus Event Management System - " + account.getUsername() + " (" + account.getRole() + ")");
+        getContentPane().setBackground(UiKit.PAGE);
+
+        // logo and the signed-in user at the top of the sidebar (replaces the old profile header)
+        jPanel1.removeAll();
+        jPanel1.setLayout(new BorderLayout());
+        jPanel1.add(new BrandPanel(BrandPanel.loadLogoTransparent("/com/system/gui/icon/cems_logo.jpg", 520, 160, 370, 280),
+        "CEMS", null), BorderLayout.CENTER);
+
+        // page colours: grey page, white cards
+        pnlSide.setBackground(Color.WHITE);
+        pnlCenter.setBackground(UiKit.PAGE);
+        jPanel2.setBackground(UiKit.PAGE);
+        eventsContainer.setBackground(UiKit.PAGE);
+        jScrollPane1.setBorder(null);
+        jScrollPane1.getViewport().setBackground(UiKit.PAGE);
+        jScrollPane1.getVerticalScrollBar().setUnitIncrement(16);
+
+        jLabel1.setForeground(UiKit.NAVY);
+        jLabel1.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 24));
+
+        txtSearch.setBorder(UiKit.inputBorder());
+        UiKit.secondaryButton(btnSearch);
+        btnSearch.setIcon(UiKit.tint(btnSearch.getIcon(), UiKit.PRIMARY));
+
+        UiKit.navButtonDanger(btnLogout);
+        setActiveNav(btnHome);
+        pnlSide.revalidate();
+        pnlSide.repaint();
+    }
+
+    /** Highlights one menu button in blue and shows the others plain. */
+    private void setActiveNav(JButton active) {
+        JButton[] all = { btnHome, btnEvents, btnRegister, btnManagement, btnStats, btnOrganizerKeys };
+        for (JButton b : all) if (b != null) UiKit.navButton(b, b == active);
+    }
+
+    /** The menu button that opens the given screen. */
+    private JButton navFor(String card) {
+        switch (card) {
+            case CARD_MANAGE:   return btnManagement;
+            case CARD_REGISTER: return btnRegister;
+            case CARD_REPORTS:  return btnStats;
+            default:            return btnHome;
+        }
     }
 
     // ---------- Navigation ----------
@@ -172,6 +225,7 @@ public class Dashboard extends javax.swing.JFrame {
         }
         refreshCard(name);
         cardLayout.show(contentCards, name);
+        setActiveNav(navFor(name));
     }
 
     /** Asks the panel inside a card (if it supports it) to re-read the shared data. */
@@ -263,13 +317,22 @@ public class Dashboard extends javax.swing.JFrame {
         calendarPanel1.setEventDates(eventQueries.getEventDates());
     }
 
-    /** Home / Events / View all: every event, no filter. */
+   /**
+ * Events / View all: every event, past ones included.
+ * Home (the Dashboard): only upcoming events (today and later), soonest first.
+ */
     private void showAllEvents(boolean asEventsView) {
         txtSearch.setText("");
         refreshHome();
-        showEventCards(() -> eventQueries.getAllEvents(), asEventsView ? "All Events" : "Dashboard",
-                "No events have been created yet.");
+        if (asEventsView) {
+            showEventCards(() -> eventQueries.getAllEvents(), "All Events",
+                    "No events have been created yet.");
+        } else {
+            showEventCards(() -> eventQueries.getUpcomingEvents(0), "Dashboard",   // 0 = no limit
+                    "No upcoming events.");
+        }
         cardLayout.show(contentCards, CARD_HOME);
+        setActiveNav(asEventsView ? btnEvents : btnHome);
     }
 
     private void runSearch() {
@@ -306,6 +369,7 @@ public class Dashboard extends javax.swing.JFrame {
         if (events.isEmpty()) {
             JLabel none = new JLabel(homeEmptyMessage);
             none.setBorder(javax.swing.BorderFactory.createEmptyBorder(20, 20, 20, 20));
+            none.setForeground(UiKit.MUTED);
             none.setAlignmentX(Component.LEFT_ALIGNMENT);
             eventsContainer.add(none);
         }

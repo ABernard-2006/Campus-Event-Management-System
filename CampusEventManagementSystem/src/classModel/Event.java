@@ -67,6 +67,9 @@ public abstract class Event {
     /** When the event ends: start + duration. May fall on the next calendar day. */
     public LocalDateTime getEndDateTime() { return getStartDateTime().plusMinutes(durationMinutes); }
 
+    /** True once the event's end time has passed (an event that finished earlier today is over, too). */
+    public boolean hasEnded(LocalDateTime now) { return !getEndDateTime().isAfter(now); }
+
     /** Time of day at which the event ends. */
     public LocalTime getEndTime() { return getEndDateTime().toLocalTime(); }
 
@@ -137,7 +140,7 @@ public abstract class Event {
                 + "\nDate   : " + date.format(DATE_FMT)
                 + "\nTime   : " + getTimeRangeText()
                 + "\nLength : " + getDurationText() + " (" + durationMinutes + " minutes)"
-                + "\nVenue  : " + venue.getVenueName() + " (" + venue.getLocation() + ")";
+                + "\nVenue  : " + venue.getDisplayName();
     }
 
     @Override

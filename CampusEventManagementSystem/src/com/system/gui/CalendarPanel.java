@@ -14,9 +14,9 @@ import javax.swing.*;
 public class CalendarPanel extends JPanel {
 
     private static final Color CARD_BG   = Color.WHITE;
-    private static final Color TEXT      = new Color(0x2B2B3C);
+    private static final Color TEXT      = UiKit.NAVY;
     private static final Color MUTED     = new Color(0xC4C4D0);
-    private static final Color ACCENT    = new Color(0x7C6FF0);
+    private static final Color ACCENT    = UiKit.PRIMARY;
     private static final Font  BASE_FONT = new Font("Segoe UI", Font.PLAIN, 14);
 
     private YearMonth month = YearMonth.now();
@@ -65,9 +65,9 @@ public class CalendarPanel extends JPanel {
             @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(getModel().isRollover() ? new Color(0xEFEDFD) : Color.WHITE);
+                g2.setColor(getModel().isRollover() ? UiKit.SOFT_BLUE : Color.WHITE);
                 g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
-                g2.setColor(new Color(0xE6E6EE));
+                g2.setColor(UiKit.LINE);
                 g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
                 g2.dispose();
                 super.paintComponent(g);
@@ -147,7 +147,7 @@ public class CalendarPanel extends JPanel {
                 g2.setColor(ACCENT);
                 g2.fillRoundRect(x, y, size, size, 16, 16);
             } else if (hover) {
-                g2.setColor(new Color(0xF1EFFD));
+                g2.setColor(UiKit.SOFT_BLUE);
                 g2.fillRoundRect(x, y, size, size, 16, 16);
             }
 
@@ -172,7 +172,7 @@ public class CalendarPanel extends JPanel {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         int w = getWidth() - 8, h = getHeight() - 8;
         for (int i = 4; i > 0; i--) {                      // fake soft shadow
-            g2.setColor(new Color(90, 80, 160, 10));
+            g2.setColor(new Color(14, 27, 43, 10));
             g2.fillRoundRect(4 - i, 4 - i + 3, w + i * 2, h + i * 2, 28, 28);
         }
         g2.setColor(CARD_BG);

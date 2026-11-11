@@ -59,11 +59,12 @@ public class AttendancePanel extends JPanel implements Refreshable {
 
     private void build() {
         setLayout(new BorderLayout(8, 8));
-        setBackground(new java.awt.Color(247, 247, 252));
+        setBackground(UiKit.PAGE);
         setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 12, 10, 12));
 
         JLabel title = new JLabel("Attendance");
         title.setFont(new java.awt.Font("Segoe UI", 1, 18));
+        title.setForeground(UiKit.NAVY);
         JPanel pick = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         pick.setOpaque(false);
         pick.add(new JLabel("Event:"));
@@ -76,14 +77,22 @@ public class AttendancePanel extends JPanel implements Refreshable {
         add(top, BorderLayout.NORTH);
 
         table.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        table.setRowHeight(22);
+        UiKit.styleTable(table);
         table.getColumnModel().getColumn(0).setPreferredWidth(45);
         table.getColumnModel().getColumn(1).setPreferredWidth(150);
         table.getColumnModel().getColumn(3).setPreferredWidth(150);
-        add(new JScrollPane(table), BorderLayout.CENTER);
+        UiKit.colorStatusColumn(table, 5);                 // Registered green, Cancelled red
+        UiKit.colorStatusColumn(table, 6);                 // Present green, Absent red, Not marked grey
+        JScrollPane scroll = new JScrollPane(table);
+        scroll.setBorder(javax.swing.BorderFactory.createLineBorder(UiKit.LINE));
+        scroll.getViewport().setBackground(java.awt.Color.WHITE);
+        add(scroll, BorderLayout.CENTER);
 
         btnPresent = new JButton("Mark Present");
         btnAbsent = new JButton("Mark Absent");
+        UiKit.successButton(btnPresent);
+        UiKit.dangerButton(btnAbsent);
+        lblSummary.setForeground(UiKit.MUTED);
         JPanel bottom = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         bottom.setOpaque(false);
         bottom.add(btnPresent);

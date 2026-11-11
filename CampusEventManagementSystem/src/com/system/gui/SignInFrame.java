@@ -86,16 +86,24 @@ public class SignInFrame extends javax.swing.JFrame {
         txtInviteKey = new JTextField();
         lblInviteHint = new JLabel("Ask an administrator for a key. Each key works once.");
         lblInviteHint.setFont(new java.awt.Font("Calibri", 0, 11));
-        lblInviteHint.setForeground(java.awt.Color.GRAY);
+        lblInviteHint.setForeground(UiKit.MUTED);
 
         // Rebuild the panel so the new rows fit. The existing components are re-used, not replaced.
         jPanel1.removeAll();
         jPanel1.setLayout(new GridBagLayout());
         jPanel1.setBorder(BorderFactory.createEmptyBorder(26, 22, 20, 22));
-        lblSignInToCMS.setPreferredSize(new Dimension(356, 28));
+        lblSignInToCMS.setPreferredSize(null);
+        lblSignInToCMS.setPreferredSize(new Dimension(Math.max(356, lblSignInToCMS.getPreferredSize().width), 28));
         jLabel1.setHorizontalAlignment(SwingConstants.CENTER);
 
-        addRow(lblSignInToCMS, 0);
+        // the logo on top, then the form
+        java.awt.Image logo = BrandPanel.loadLogoTransparent("/com/system/gui/icon/cems_logo.jpg", 520, 160, 370, 280);
+        if (logo != null) {
+            JLabel logoLabel = new JLabel(new javax.swing.ImageIcon(BrandPanel.fit(logo, 130, 98)));
+            logoLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            addRow(logoLabel, 0);
+        }
+        addRow(lblSignInToCMS, 4);
         addRow(jLabel1, 14);
         addRow(lblSigInUser, 0);
         addRow(txtSignInUser, 2);
@@ -132,10 +140,22 @@ public class SignInFrame extends javax.swing.JFrame {
         getContentPane().setLayout(new BorderLayout());
         getContentPane().add(jPanel1, BorderLayout.CENTER);
         getRootPane().setDefaultButton(btnRegister);          // pressing Enter registers
+        applyTheme();
         setTitle("Campus Event Management System - Register");
         setResizable(false);
         setPreferredSize(null);                             // let the window fit its content
         pack();
+    }
+
+    /** Look of the sign-up window (colours, button, link). Outside the generated code on purpose. */
+    private void applyTheme() {
+        jPanel1.setBackground(java.awt.Color.WHITE);
+        lblSignInToCMS.setForeground(UiKit.NAVY);
+        jLabel1.setForeground(UiKit.MUTED);
+        for (JLabel l : new JLabel[] { lblSigInUser, lblSignInEmail, lblRegisterAs, lblInviteKey, lblCreatePass, lblConfirmPass })
+            l.setForeground(UiKit.NAVY);
+        lblSignUp.setText("<html>Already have an account? <font color='#477CC2'><u>Login</u></font></html>");
+        UiKit.primaryButton(btnRegister);
     }
 
     /** Adds one component as a full-width row with the given empty space above it. */

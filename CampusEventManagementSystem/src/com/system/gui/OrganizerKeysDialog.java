@@ -76,13 +76,14 @@ public class OrganizerKeysDialog extends JDialog {
         info.setBorder(BorderFactory.createEmptyBorder(10, 12, 6, 12));
 
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        table.setRowHeight(22);
+        UiKit.styleTable(table);
         table.getColumnModel().getColumn(0).setPreferredWidth(40);
         table.getColumnModel().getColumn(1).setPreferredWidth(170);
         table.getColumnModel().getColumn(2).setPreferredWidth(70);
         table.getColumnModel().getColumn(3).setPreferredWidth(125);
         table.getColumnModel().getColumn(4).setPreferredWidth(125);
         table.getColumnModel().getColumn(5).setPreferredWidth(100);
+        UiKit.colorStatusColumn(table, 2);                 // Active green, Used grey, Revoked / Expired red
         JScrollPane scroll = new JScrollPane(table);
         scroll.setPreferredSize(new Dimension(660, 260));
         scroll.setBorder(BorderFactory.createEmptyBorder(0, 12, 0, 12));
@@ -95,6 +96,12 @@ public class OrganizerKeysDialog extends JDialog {
         add(info, BorderLayout.NORTH);
         add(scroll, BorderLayout.CENTER);
         add(buttons, BorderLayout.SOUTH);
+
+        getContentPane().setBackground(UiKit.PAGE);
+        buttons.setOpaque(false);
+        UiKit.primaryButton(btnGenerate);
+        UiKit.dangerButton(btnRevoke);
+        UiKit.secondaryButton(btnClose);
 
         btnRevoke.setEnabled(false);
         table.getSelectionModel().addListSelectionListener(e -> {
