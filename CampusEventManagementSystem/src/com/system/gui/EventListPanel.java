@@ -61,11 +61,12 @@ public class EventListPanel extends JPanel implements Refreshable {
 
     private void build() {
         setLayout(new BorderLayout(8, 8));
-        setBackground(new java.awt.Color(247, 247, 252));
+        setBackground(UiKit.PAGE);
         setBorder(javax.swing.BorderFactory.createEmptyBorder(10, 12, 10, 12));
 
         JLabel title = new JLabel("All Events");
         title.setFont(new java.awt.Font("Segoe UI", 1, 18));
+        title.setForeground(UiKit.NAVY);
         JPanel top = new JPanel(new BorderLayout());
         top.setOpaque(false);
         JPanel searchBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
@@ -79,14 +80,13 @@ public class EventListPanel extends JPanel implements Refreshable {
         add(top, BorderLayout.NORTH);
 
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        table.setRowHeight(22);
-        table.getColumnModel().getColumn(0).setPreferredWidth(35);
-        table.getColumnModel().getColumn(1).setPreferredWidth(170);
-        table.getColumnModel().getColumn(4).setPreferredWidth(150);    // Time shows "start - end"
-        table.getColumnModel().getColumn(5).setPreferredWidth(70);     // Duration
-        table.getColumnModel().getColumn(6).setPreferredWidth(110);    // Venue
-        table.getColumnModel().getColumn(9).setPreferredWidth(150);    // Speaker(s)
-        add(new JScrollPane(table), BorderLayout.CENTER);
+        UiKit.styleTable(table);
+        int[] widths = { 35, 190, 85, 95, 150, 85, 100, 75, 90, 135 };   // ID, Name, Type, Date, Time, Duration, Venue, Capacity, Registered, Speaker(s)
+        for (int i = 0; i < widths.length; i++) table.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
+        JScrollPane scroll = new JScrollPane(table);
+        scroll.setBorder(javax.swing.BorderFactory.createLineBorder(UiKit.LINE));
+        scroll.getViewport().setBackground(java.awt.Color.WHITE);
+        add(scroll, BorderLayout.CENTER);
 
         JPanel bottom = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         bottom.setOpaque(false);
@@ -94,6 +94,12 @@ public class EventListPanel extends JPanel implements Refreshable {
         bottom.add(btnDelete);
         bottom.add(lblCount);
         add(bottom, BorderLayout.SOUTH);
+
+        UiKit.primaryButton(btnSearch);
+        UiKit.secondaryButton(btnShowAll);
+        UiKit.primaryButton(btnEdit);
+        UiKit.dangerButton(btnDelete);
+        lblCount.setForeground(UiKit.MUTED);
 
         btnSearch.addActionListener(this::btnSearchActionPerformed);
         txtSearch.addActionListener(this::txtSearchActionPerformed);

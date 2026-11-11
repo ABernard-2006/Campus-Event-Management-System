@@ -70,11 +70,21 @@ public class RegistrationPanel extends javax.swing.JPanel implements Refreshable
 
     private void setupForm() {
         regTable.setModel(tableModel);
+        UiKit.styleTable(regTable);
+        UiKit.colorStatusColumn(regTable, 4);                 // Registered green, Cancelled red
+        jScrollPane1.setBorder(javax.swing.BorderFactory.createLineBorder(UiKit.LINE));
+        setBackground(UiKit.PAGE);
+        lblParticipantsReg.setForeground(UiKit.NAVY);
+        lblRegHistory.setForeground(UiKit.NAVY);
+        UiKit.primaryButton(btnRegister);
+        UiKit.secondaryButton(btnRegClear);
+        UiKit.primaryButton(btnSearchReg);
+        UiKit.dangerButton(btnCancelReg);
         regTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         lblRegExtra2.setText("Position:");
         if (!staff) lblParticipantsReg.setText("Register for an Event");
 
-        addCancelBar();
+        centerLayout(buildHistoryTable());
 
         cmbParticipantType.addActionListener(e -> updateTypeFields());
         btnCancelReg.addActionListener(this::btnCancelRegActionPerformed);   // hand-added button (not in the .form)
@@ -83,23 +93,88 @@ public class RegistrationPanel extends javax.swing.JPanel implements Refreshable
         refresh();
     }
 
-    /**
-     * Puts a "Cancel Selected Registration" button under the history table without touching the
-     * generated layout: the table's scroll pane is swapped for a small holder panel that contains
-     * the same scroll pane plus the button bar.
-     */
-    private void addCancelBar() {
-        JPanel holder = new JPanel(new BorderLayout(0, 4));
-        holder.setOpaque(false);
-        holder.setPreferredSize(new java.awt.Dimension(100, 204));   // same height the form gave the table
-        ((javax.swing.GroupLayout) getLayout()).replace(jScrollPane1, holder);
-        JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        bar.setOpaque(false);
-        bar.add(btnCancelReg);
-        holder.add(jScrollPane1, BorderLayout.CENTER);
-        holder.add(bar, BorderLayout.SOUTH);
-    }
+    private JPanel buildHistoryTable() {
+    JPanel holder = new JPanel(new BorderLayout(0, 4));
+    holder.setOpaque(false);
+    holder.setPreferredSize(new java.awt.Dimension(100, 150));
+    JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+    bar.setOpaque(false);
+    bar.add(btnCancelReg);
+    holder.add(jScrollPane1, BorderLayout.CENTER);
+    holder.add(bar, BorderLayout.SOUTH);
+    return holder;
+}
 
+private void centerLayout(JPanel historyTable) {
+    removeAll();
+    setLayout(new BorderLayout(0, 10));
+    setBorder(javax.swing.BorderFactory.createEmptyBorder(14, 24, 14, 24));
+
+    for (javax.swing.JComponent f : new javax.swing.JComponent[] { txtRegName, txtRegContact, txtRegNum,
+            txtRegExtra, txtRegExtra2, cmbParticipantType, cmbSelectEvent })
+        UiKit.width(f, 300);
+
+    javax.swing.JPanel form = UiKit.transparent(new java.awt.GridBagLayout());
+    javax.swing.JComponent[][] rows = {
+        { lblRegName,          txtRegName },
+        { lblRegContact,       txtRegContact },
+        { lblParticipantsType, cmbParticipantType },
+        { lblRegNum,           txtRegNum },
+        { lblSelectEvent,      cmbSelectEvent },
+        { lblRegExtra,         txtRegExtra },
+        { lblRegExtra2,        txtRegExtra2 },
+    };
+    
+    for (int y = 0; y < rows.length; y++) {
+        // Trim the trailing space some labels have, and right-align the text
+        javax.swing.JLabel label = (javax.swing.JLabel) rows[y][0];
+        label.setText(label.getText().trim());
+        label.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+
+        java.awt.GridBagConstraints c = new java.awt.GridBagConstraints();
+        c.gridy = y; c.gridx = 0;
+        c.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        c.insets = new java.awt.Insets(5, 0, 5, 12);
+        form.add(label, c);
+
+        c = new java.awt.GridBagConstraints();
+        c.gridy = y; c.gridx = 1;
+        c.anchor = java.awt.GridBagConstraints.WEST;
+        c.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        c.insets = new java.awt.Insets(5, 0, 5, 0);
+        form.add(rows[y][1], c);
+    }
+    
+    javax.swing.JPanel buttons = UiKit.transparent(new FlowLayout(FlowLayout.CENTER, 12, 0));
+    buttons.add(btnRegister);
+    buttons.add(btnRegClear);
+    java.awt.GridBagConstraints b = new java.awt.GridBagConstraints();
+    b.gridy = rows.length; b.gridx = 0; b.gridwidth = 2;
+    b.insets = new java.awt.Insets(14, 0, 0, 0);
+    form.add(buttons, b);
+
+    javax.swing.JPanel north = UiKit.transparent(new java.awt.GridBagLayout());
+    java.awt.GridBagConstraints n = new java.awt.GridBagConstraints();
+    n.gridx = 0;
+    n.gridy = 0; north.add(lblParticipantsReg, n);
+    n.gridy = 1; n.insets = new java.awt.Insets(14, 0, 0, 0); north.add(form, n);
+
+    UiKit.width(txtSearchReg, 180);
+    javax.swing.JPanel search = UiKit.transparent(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+    search.add(lblSearchReg);
+    search.add(txtSearchReg);
+    search.add(btnSearchReg);
+    javax.swing.JPanel bar = UiKit.transparent(new BorderLayout());
+    bar.add(lblRegHistory, BorderLayout.WEST);
+    bar.add(search, BorderLayout.EAST);
+    javax.swing.JPanel history = UiKit.transparent(new BorderLayout(0, 8));
+    history.add(bar, BorderLayout.NORTH);
+    history.add(historyTable, BorderLayout.CENTER);
+
+    add(north, BorderLayout.NORTH);
+    add(history, BorderLayout.CENTER);
+    revalidate();
+}
     /** Re-reads events and registrations from the manager (also called by the dashboard after any change). */
     @Override
     public void refresh() {
@@ -146,6 +221,8 @@ public class RegistrationPanel extends javax.swing.JPanel implements Refreshable
         lblRegExtra.setText(student ? "Program:" : faculty ? "Department:" : "Affiliation / Company:");
         lblRegExtra2.setVisible(faculty);
         txtRegExtra2.setVisible(faculty);
+        revalidate();
+        repaint();
     }
 
     // ---------- Participant accounts: fixed to their own profile ----------

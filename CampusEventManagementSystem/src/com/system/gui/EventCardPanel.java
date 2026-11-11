@@ -15,9 +15,43 @@ public class EventCardPanel extends javax.swing.JPanel {
      */
     public EventCardPanel() {
         initComponents();
+        applyResponsiveLayout();
         jTextArea2.setEditable(false);
         jTextArea2.setLineWrap(true);
         jTextArea2.setWrapStyleWord(true);
+    }
+
+    /**
+     * Makes the card stretch to the full width of the list (the generated layout kept it at a fixed
+     * 600 px and left the text box a fixed 360 px wide).
+     */
+    private void applyResponsiveLayout() {
+        removeAll();
+        setLayout(new java.awt.BorderLayout());
+        setMinimumSize(new java.awt.Dimension(320, 170));
+        setPreferredSize(new java.awt.Dimension(300, 170));   // narrow on purpose: the list stretches it to full width
+        setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 170));
+        setBackground(java.awt.Color.WHITE);
+        setBorder(UiKit.cardBorder(10, 16));
+
+        jPanel1.removeAll();
+        jPanel1.setOpaque(false);
+        jPanel1.setLayout(new java.awt.BorderLayout(0, 6));
+        javax.swing.JPanel info = UiKit.transparent(new java.awt.GridLayout(3, 1, 0, 2));
+        info.add(jLabel2);
+        info.add(jLabel4);
+        info.add(jLabel3);
+        jScrollPane2.setPreferredSize(null);
+        jScrollPane2.setBorder(javax.swing.BorderFactory.createLineBorder(UiKit.LINE));
+        jTextArea2.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, 13));
+        jTextArea2.setBackground(new java.awt.Color(0xF9FBFE));
+        jTextArea2.setForeground(UiKit.NAVY);
+        jLabel2.setForeground(UiKit.NAVY);          // title
+        jLabel4.setForeground(UiKit.NAVY);          // date and time
+        jLabel3.setForeground(UiKit.MUTED);         // venue
+        jPanel1.add(info, java.awt.BorderLayout.NORTH);
+        jPanel1.add(jScrollPane2, java.awt.BorderLayout.CENTER);
+        add(jPanel1, java.awt.BorderLayout.CENTER);
     }
 
     /** Fills the card from a real event (name, date and time, venue and type-specific details). */
@@ -30,7 +64,15 @@ public class EventCardPanel extends javax.swing.JPanel {
         jLabel4.setText(event.getDate().format(dateFmt) + "  -  " + event.getStartTime().format(timeFmt)
                 + " to " + event.getEndTime().format(timeFmt) + (event.endsNextDay() ? " (+1 day)" : "")
                 + "  (" + event.getDurationText() + ")");
-        jLabel3.setText(event.getVenue().getVenueName() + " - " + event.getVenue().getLocation());
+        jLabel3.setText(event.getVenue().getDisplayName());
+
+        // a coloured strip on the left tells the type at a glance: orange = Workshop, blue = Seminar
+        java.awt.Color strip = "Workshop".equals(event.getEventType()) ? UiKit.WARNING : UiKit.PRIMARY;
+        setBorder(javax.swing.BorderFactory.createCompoundBorder(
+                javax.swing.BorderFactory.createLineBorder(UiKit.LINE),
+                javax.swing.BorderFactory.createCompoundBorder(
+                        javax.swing.BorderFactory.createMatteBorder(0, 5, 0, 0, strip),
+                        javax.swing.BorderFactory.createEmptyBorder(10, 12, 10, 16))));
 
         StringBuilder details = new StringBuilder();
         String people = event.getSpeakerNames();

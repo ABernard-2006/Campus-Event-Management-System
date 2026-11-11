@@ -37,7 +37,7 @@ public class LoginFrame extends javax.swing.JFrame {
         this.manager = manager;
         this.authentication = manager.getAuthenticationService();
         initComponents();
-        getContentPane().setBackground(new java.awt.Color(245, 245, 247));
+        getContentPane().setBackground(UiKit.PAGE);
         setUpLogin();
     }
 
@@ -52,6 +52,7 @@ public class LoginFrame extends javax.swing.JFrame {
         cmdParticipants.setSelectedItem(UserAccount.ROLE_PARTICIPANT);
 
         getRootPane().setDefaultButton(btnLogin);          // pressing Enter logs in
+        applyTheme();
 
         // "Don't have an account? Register" link
         lblRegister.setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR));
@@ -70,6 +71,39 @@ public class LoginFrame extends javax.swing.JFrame {
             checkRemember.setSelected(true);
             javax.swing.SwingUtilities.invokeLater(() -> txtPassword.requestFocusInWindow());
         }
+    }
+
+    /** Look of the login window (colours, logo, button). Outside the generated code on purpose. */
+    private void applyTheme() {
+        pnlCard.setBackground(java.awt.Color.WHITE);
+        pnlCard.setBorder(new javax.swing.border.LineBorder(UiKit.LINE, 1, true));
+        lblTitle.setForeground(UiKit.NAVY);
+        lblSubTitle.setForeground(UiKit.MUTED);
+        lblEmail.setForeground(UiKit.NAVY);
+        lblPassword.setForeground(UiKit.NAVY);
+        lblLoginAs.setForeground(UiKit.NAVY);
+        checkRemember.setBackground(java.awt.Color.WHITE);
+        checkRemember.setForeground(UiKit.NAVY);
+        lblRegister.setText("<html>Don't have an account? <font color='#477CC2'><u>Register</u></font></html>");
+        UiKit.primaryButton(btnLogin);
+
+        // the logo above the card
+        java.awt.Image logo = BrandPanel.loadLogoTransparent("/com/system/gui/icon/cems_logo.jpg", 520, 160, 370, 280);
+        if (logo != null) {
+            getContentPane().remove(pnlCard);
+            java.awt.GridBagConstraints c = new java.awt.GridBagConstraints();
+            c.gridy = 0;
+            c.insets = new java.awt.Insets(0, 0, 8, 0);
+            getContentPane().add(new javax.swing.JLabel(new javax.swing.ImageIcon(BrandPanel.fit(logo, 150, 114))), c);
+            c = new java.awt.GridBagConstraints();
+            c.gridy = 1;
+            getContentPane().add(pnlCard, c);
+        }
+        java.awt.Dimension size = new java.awt.Dimension(460, 580);
+        setMinimumSize(size);
+        setMaximumSize(size);
+        setPreferredSize(size);
+        setSize(size);
     }
 
     // ------------------------------------------------------------------

@@ -58,6 +58,13 @@ public class EventPanel extends javax.swing.JPanel implements Refreshable {
 
     private void setupForm() {
         scrollpaneAddedSpeaker.setViewportView(lstSpeakers);
+        setBackground(UiKit.PAGE);
+        lblEventPanelTitle.setForeground(UiKit.NAVY);
+        UiKit.primaryButton(btnCerateEvent);          // Create Event / Save Changes
+        UiKit.secondaryButton(btnEventClear);         // Clear / Cancel Edit
+        UiKit.secondaryButton(btnAddSpeaker);
+        UiKit.secondaryButton(btnRemoveSpeaker);
+     
         SpinEventDate.setEditor(new JSpinner.DateEditor(SpinEventDate, "yyyy-MM-dd"));
         SpinEventType.setEditor(new JSpinner.DateEditor(SpinEventType, "hh:mm a"));
         cmbEventType.removeItem(" ");                      // blank placeholder item in the form is not a real type
@@ -67,6 +74,7 @@ public class EventPanel extends javax.swing.JPanel implements Refreshable {
         txtEventVenue.addFocusListener(new java.awt.event.FocusAdapter() {
             @Override public void focusLost(java.awt.event.FocusEvent e) { suggestCapacity(); }
         });
+        centerLayout();
         updateTypeFields();
     }
 
@@ -76,12 +84,135 @@ public class EventPanel extends javax.swing.JPanel implements Refreshable {
         return o == null ? "" : o.toString().trim();
     }
 
+    /**
+     * One form row: the label on the left (trimmed, left-aligned) and the field across the two right-hand
+     * columns. Returns the next free row number.
+     */
+    private static int addRow(javax.swing.JPanel form, int y, javax.swing.JLabel label, javax.swing.JComponent field) {
+        label.setText(label.getText().trim());                 // the generated texts end with a stray space
+        label.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+        java.awt.GridBagConstraints c = new java.awt.GridBagConstraints();
+        c.gridx = 0; c.gridy = y;
+        c.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        c.insets = new java.awt.Insets(5, 0, 5, 12);
+        form.add(label, c);
+        c = new java.awt.GridBagConstraints();
+        c.gridx = 1; c.gridy = y; c.gridwidth = 2;
+        c.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        c.insets = new java.awt.Insets(5, 0, 5, 0);
+        form.add(field, c);
+        return y + 1;
+    }
+
+    /**
+     * Puts the title, the form and the buttons in the middle of the screen. Three columns: labels, fields,
+     * and a button column (Add Speaker / Remove Speaker, the same width). Create and Clear sit centred
+     * under the form, the same size. The components are the ones the Form Editor made; only their layout is
+     * replaced, here in handwritten code so the Form Editor cannot overwrite it.
+     */
+    private void centerLayout() {
+        removeAll();
+        setLayout(new java.awt.BorderLayout(0, 10));
+        setBorder(javax.swing.BorderFactory.createEmptyBorder(14, 24, 14, 24));
+
+        // field widths: the plain fields run across the field and button columns, so they end where the buttons end
+        for (javax.swing.JComponent f : new javax.swing.JComponent[] { txtEventName, cmbEventType, txtEventVenue,
+                txtEventTopic, txtEventMaterials, txtMaxEventCap, txtEventSpeaker })
+            UiKit.width(f, 300);
+        UiKit.width(SpinEventDate, 140);
+        UiKit.width(SpinEventType, 110);
+        UiKit.width(txtEventDuration, 90);
+        UiKit.size(scrollpaneAddedSpeaker, 300, 110);
+
+        javax.swing.JPanel form = UiKit.transparent(new java.awt.GridBagLayout());
+        int y = 0;
+        y = addRow(form, y, lblEventName, txtEventName);
+        y = addRow(form, y, lblEventType, cmbEventType);
+
+        // date and time on one row
+        javax.swing.JPanel dateTime = UiKit.transparent(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 0, 0));
+        dateTime.add(SpinEventDate);
+        dateTime.add(javax.swing.Box.createHorizontalStrut(24));
+        dateTime.add(lblEventTime);
+        dateTime.add(javax.swing.Box.createHorizontalStrut(8));
+        dateTime.add(SpinEventType);
+        y = addRow(form, y, lblEventDate, dateTime);
+
+        // duration and its unit on one row
+        javax.swing.JPanel duration = UiKit.transparent(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 0, 0));
+        duration.add(txtEventDuration);
+        duration.add(javax.swing.Box.createHorizontalStrut(8));
+        duration.add(lblEventDurationUnit);
+        y = addRow(form, y, lblEventDuration, duration);
+
+        y = addRow(form, y, lblEventVenue, txtEventVenue);
+        y = addRow(form, y, lblEventTopic, txtEventTopic);          // "Topic" or "Subject"
+        y = addRow(form, y, lblEventMaterials, txtEventMaterials);  // Workshop only
+        y = addRow(form, y, lblMaxEventCap, txtMaxEventCap);
+
+        // speaker name + Add Speaker (button column)
+        lblEventSpeaker.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+        java.awt.GridBagConstraints c = new java.awt.GridBagConstraints();
+        c.gridx = 0; c.gridy = y; c.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        c.insets = new java.awt.Insets(5, 0, 5, 12);
+        form.add(lblEventSpeaker, c);
+        c = new java.awt.GridBagConstraints();
+        c.gridx = 1; c.gridy = y; c.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        c.insets = new java.awt.Insets(5, 0, 5, 8);
+        form.add(txtEventSpeaker, c);
+        c = new java.awt.GridBagConstraints();
+        c.gridx = 2; c.gridy = y; c.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        c.insets = new java.awt.Insets(5, 0, 5, 0);
+        form.add(btnAddSpeaker, c);
+        y++;
+
+        // speaker list + Remove Speaker (same column, so the two buttons are the same width)
+        lblAddedSpeaker.setText(lblAddedSpeaker.getText().trim());
+        lblAddedSpeaker.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+        c = new java.awt.GridBagConstraints();
+        c.gridx = 0; c.gridy = y; c.anchor = java.awt.GridBagConstraints.NORTHWEST;
+        c.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        c.insets = new java.awt.Insets(9, 0, 5, 12);
+        form.add(lblAddedSpeaker, c);
+        c = new java.awt.GridBagConstraints();
+        c.gridx = 1; c.gridy = y; c.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        c.insets = new java.awt.Insets(5, 0, 5, 8);
+        form.add(scrollpaneAddedSpeaker, c);
+        c = new java.awt.GridBagConstraints();
+        c.gridx = 2; c.gridy = y; c.anchor = java.awt.GridBagConstraints.NORTH;
+        c.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        c.insets = new java.awt.Insets(5, 0, 5, 0);
+        form.add(btnRemoveSpeaker, c);
+        y++;
+
+        // Create / Clear: equal size, centred under the form
+        javax.swing.JPanel actions = UiKit.transparent(new java.awt.GridLayout(1, 2, 12, 0));
+        actions.add(btnCerateEvent);
+        actions.add(btnEventClear);
+        c = new java.awt.GridBagConstraints();
+        c.gridx = 0; c.gridy = y; c.gridwidth = 3;
+        c.insets = new java.awt.Insets(16, 0, 0, 0);
+        form.add(actions, c);
+
+        // the title above the form, both centred
+        javax.swing.JPanel north = UiKit.transparent(new java.awt.GridBagLayout());
+        java.awt.GridBagConstraints n = new java.awt.GridBagConstraints();
+        n.gridx = 0;
+        n.gridy = 0; north.add(lblEventPanelTitle, n);
+        n.gridy = 1; n.insets = new java.awt.Insets(14, 0, 0, 0); north.add(form, n);
+
+        add(north, java.awt.BorderLayout.NORTH);
+        revalidate();
+    }
+    
     /** Dynamic switching: Workshop shows Topic + Materials, Seminar shows Subject only. */
     private void updateTypeFields() {
         boolean workshop = selectedType().equals(EventService.TYPE_WORKSHOP);
         lblEventTopic.setText(workshop ? "Topic:" : "Subject:");
         lblEventMaterials.setVisible(workshop);
         txtEventMaterials.setVisible(workshop);
+        revalidate();
+        repaint();
     }
 
     /** When the typed venue already exists, fill in its capacity so the two cannot disagree. */

@@ -23,7 +23,7 @@ public class ManageEventsPanel extends JPanel implements Refreshable {
     public ManageEventsPanel(EventManager manager, UserAccount actor) {
         setLayout(new BorderLayout());
         setPreferredSize(new Dimension(780, 580));
-        setBackground(new java.awt.Color(247, 247, 252));
+        setBackground(UiKit.PAGE);
 
         eventPanel = new EventPanel(manager, actor);
         listPanel = new EventListPanel(manager, actor, this::startEditing);

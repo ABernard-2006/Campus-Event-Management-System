@@ -10,9 +10,9 @@ import javax.swing.*;
 
 public class UpcomingEventsPanel extends JPanel {
 
-    private static final Color TEXT  = new Color(0x2B2B3C);
-    private static final Color SUB   = new Color(0x7A7A8C);
-    private static final Color ACCENT = new Color(0x7C6FF0);
+    private static final Color TEXT  = UiKit.NAVY;
+    private static final Color SUB   = UiKit.MUTED;
+    private static final Color ACCENT = UiKit.PRIMARY;
     private static final Font  BASE  = new Font("Segoe UI", Font.PLAIN, 13);
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("MMM d, yyyy");
 
@@ -106,7 +106,7 @@ public class UpcomingEventsPanel extends JPanel {
         @Override protected void paintComponent(Graphics g) {
             super.paintComponent(g);
             if (divider) {
-                g.setColor(new Color(0xEEEEF4));
+                g.setColor(UiKit.LINE);
                 g.drawLine(0, getHeight() - 1, getWidth(), getHeight() - 1);
             }
         }
@@ -119,10 +119,10 @@ public class UpcomingEventsPanel extends JPanel {
         }
 
         static Color[] colorsFor(long days) {
-            if (days < 0)  return new Color[]{new Color(0xEEEEF2), new Color(0x8A8A99)};
-            if (days <= 2) return new Color[]{new Color(0xFDE6EA), new Color(0xE0556E)};
-            if (days <= 7) return new Color[]{new Color(0xFFF1D0), new Color(0xC99A1B)};
-            return new Color[]{new Color(0xE0F5E6), new Color(0x3DA35D)};
+            if (days < 0)  return new Color[]{new Color(0xEEF0F3), UiKit.MUTED};                 // ended
+            if (days <= 2) return new Color[]{new Color(0xFBE4E8), UiKit.DANGER_DARK};           // very soon
+            if (days <= 7) return new Color[]{new Color(0xFDEBDD), UiKit.WARNING_DARK};          // this week
+            return new Color[]{new Color(0xE3F3E4), UiKit.SUCCESS_DARK};                         // later
         }
     }
 
@@ -180,7 +180,7 @@ public class UpcomingEventsPanel extends JPanel {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         int w = getWidth() - 8, h = getHeight() - 8;
         for (int i = 4; i > 0; i--) {
-            g2.setColor(new Color(90, 80, 160, 10));
+            g2.setColor(new Color(14, 27, 43, 10));
             g2.fillRoundRect(4 - i, 4 - i + 3, w + i * 2, h + i * 2, 28, 28);
         }
         g2.setColor(Color.WHITE);

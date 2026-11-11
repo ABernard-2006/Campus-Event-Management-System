@@ -69,10 +69,90 @@ public class ReportPanel extends javax.swing.JPanel implements Refreshable {
         setupReport();
     }
 
+    /** A summary tile: white card with a coloured strip on the left and a coloured number. */
+    private static void styleTile(javax.swing.JPanel tile, javax.swing.JLabel caption,
+                                  javax.swing.JLabel number, java.awt.Color accent) {
+        tile.setBackground(java.awt.Color.WHITE);
+        tile.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+                javax.swing.BorderFactory.createLineBorder(UiKit.LINE),
+                javax.swing.BorderFactory.createMatteBorder(0, 5, 0, 0, accent)));
+        caption.setForeground(UiKit.NAVY);
+        number.setForeground(accent);
+    }
+    
+    private void centerLayout() {
+    removeAll();
+    setLayout(new java.awt.BorderLayout(0, 10));
+    setBorder(javax.swing.BorderFactory.createEmptyBorder(14, 24, 14, 24));
+
+    UiKit.width(cmbSelectEvents, 280);
+    UiKit.width(cmbReportType, 280);
+    javax.swing.JPanel filters = UiKit.transparent(new java.awt.GridBagLayout());
+    java.awt.GridBagConstraints c = new java.awt.GridBagConstraints();
+
+    c.gridx = 0; c.gridy = 0; c.gridwidth = 4; c.anchor = java.awt.GridBagConstraints.CENTER;
+    c.insets = new java.awt.Insets(0, 6, 8, 6);
+    filters.add(lblFilterControls, c);
+
+    c.gridwidth = 1; c.insets = new java.awt.Insets(4, 6, 4, 6);
+    c.gridy = 1; c.gridx = 0; c.anchor = java.awt.GridBagConstraints.EAST;  filters.add(lblSelectEvents, c);
+    c.gridx = 1; c.gridwidth = 3; c.fill = java.awt.GridBagConstraints.HORIZONTAL;
+    c.anchor = java.awt.GridBagConstraints.WEST; filters.add(cmbSelectEvents, c);
+
+    c.gridwidth = 1; c.fill = java.awt.GridBagConstraints.NONE;
+    c.gridy = 2; c.gridx = 0; c.anchor = java.awt.GridBagConstraints.EAST;  filters.add(lblReportType, c);
+    c.gridx = 1; c.gridwidth = 3; c.fill = java.awt.GridBagConstraints.HORIZONTAL;
+    c.anchor = java.awt.GridBagConstraints.WEST; filters.add(cmbReportType, c);
+
+    c.gridwidth = 1; c.fill = java.awt.GridBagConstraints.NONE;
+    c.gridy = 3; c.gridx = 0; c.anchor = java.awt.GridBagConstraints.EAST;  filters.add(lblDataRange, c);
+    c.gridx = 1; c.anchor = java.awt.GridBagConstraints.WEST; filters.add(spinMinDateRange, c);
+    c.gridx = 2; c.anchor = java.awt.GridBagConstraints.CENTER; filters.add(lblTo, c);
+    c.gridx = 3; c.anchor = java.awt.GridBagConstraints.WEST; filters.add(spinMaxDateRange, c);
+
+    c.gridy = 4; c.gridx = 0; c.gridwidth = 4; c.anchor = java.awt.GridBagConstraints.CENTER;
+    c.insets = new java.awt.Insets(14, 6, 0, 6);
+    filters.add(btnGanerateReport, c);
+
+    javax.swing.JPanel tiles = UiKit.transparent(new java.awt.GridLayout(1, 3, 18, 0));
+    tiles.add(panelTotalReg);
+    tiles.add(panelTotalAttend);
+    tiles.add(panelTotalAttendRateNum);
+
+    javax.swing.JPanel north = UiKit.transparent(new java.awt.GridBagLayout());
+    java.awt.GridBagConstraints n = new java.awt.GridBagConstraints();
+    n.gridx = 0;
+    n.gridy = 0; north.add(lblEventReports, n);
+    n.gridy = 1; n.insets = new java.awt.Insets(14, 0, 0, 0); north.add(filters, n);
+    n.gridy = 2; n.insets = new java.awt.Insets(18, 0, 0, 0); north.add(tiles, n);
+
+    lblGenerateReport.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+    jScrollPane1.setPreferredSize(new java.awt.Dimension(100, 150));
+    javax.swing.JPanel tableArea = UiKit.transparent(new java.awt.BorderLayout(0, 8));
+    tableArea.add(lblGenerateReport, java.awt.BorderLayout.NORTH);
+    tableArea.add(jScrollPane1, java.awt.BorderLayout.CENTER);
+
+    add(north, java.awt.BorderLayout.NORTH);
+    add(tableArea, java.awt.BorderLayout.CENTER);
+    revalidate();
+}
+
     private void setupReport() {
+        setBackground(UiKit.PAGE);
+        centerLayout();
+        lblEventReports.setForeground(UiKit.NAVY);
+        lblFilterControls.setForeground(UiKit.NAVY);
+        lblGenerateReport.setForeground(UiKit.NAVY);
+        UiKit.primaryButton(btnGanerateReport);
+        styleTile(panelTotalReg, lblTatalReg, lblTotalRegNum, UiKit.PRIMARY);
+        styleTile(panelTotalAttend, lblTotalAttend, lblTotalAttendNum, UiKit.SUCCESS_DARK);
+        styleTile(panelTotalAttendRateNum, lblTotalAttendRate, lblTotalAttendRateNum, UiKit.WARNING_DARK);
+
         reportTable.setModel(tableModel);
         reportTable.setAutoCreateRowSorter(true);
-        reportTable.setRowHeight(22);
+        UiKit.styleTable(reportTable);
+        reportTable.getColumnModel().getColumn(0).setPreferredWidth(280);     // Event Name needs the most room
+        jScrollPane1.setBorder(javax.swing.BorderFactory.createLineBorder(UiKit.LINE));
 
         spinMinDateRange.setEditor(new JSpinner.DateEditor(spinMinDateRange, "yyyy-MM-dd"));
         spinMaxDateRange.setEditor(new JSpinner.DateEditor(spinMaxDateRange, "yyyy-MM-dd"));

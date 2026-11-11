@@ -100,6 +100,10 @@ public class GenerateKeyDialog extends JDialog {
         add(pnlResult, BorderLayout.CENTER);
         add(buttons, BorderLayout.SOUTH);
 
+        UiKit.primaryButton(btnGenerate);
+        UiKit.secondaryButton(btnClose);
+        UiKit.secondaryButton(btnCopy);
+
         btnGenerate.addActionListener(this::btnGenerateActionPerformed);
         btnCopy.addActionListener(this::btnCopyActionPerformed);
         btnClose.addActionListener(this::btnCloseActionPerformed);
